@@ -26,3 +26,5 @@ x-mobile:
 [Attachment](assets/reference.bin)  
 
 <div data-custom="yes">Source-only markup</div>
+
+[Unicode attachment](assets/notes%20%C3%A9.txt)

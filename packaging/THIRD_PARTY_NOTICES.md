@@ -8,6 +8,7 @@ recipes, and provenance for the specific native build.
 | Component | License | Use |
 | --- | --- | --- |
 | Qt 6.8.3 (qtbase, qtsvg) | LGPL-3.0 / GPL-3.0 with applicable exceptions | Dynamically linked UI and SVG rendering |
+| ICU 73.2 (Qt Linux SDK) | Unicode / ICU terms in bundled license | Unicode support |
 | yaml-cpp | MIT | YAML front matter |
 | libarchive | BSD and included component notices in COPYING | 7-Zip snapshots |
 | cmark-gfm (when available) | BSD-2-Clause and included notices | Markdown structure checks |

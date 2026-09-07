@@ -253,7 +253,8 @@ if(WIN32)
 elseif(APPLE)
     target_sources(TodoBench PRIVATE packaging/icons/todobench.icns)
     set_source_files_properties(packaging/icons/todobench.icns PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
-    set_target_properties(TodoBench PROPERTIES MACOSX_BUNDLE_ICON_FILE todobench.icns
+    set_target_properties(TodoBench PROPERTIES INSTALL_RPATH "@executable_path/../Frameworks"
+        MACOSX_BUNDLE_ICON_FILE todobench.icns
         MACOSX_BUNDLE_GUI_IDENTIFIER com.todobench.TodoBench
         MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
         MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION})

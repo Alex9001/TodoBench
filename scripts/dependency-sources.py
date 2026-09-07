@@ -34,13 +34,26 @@ def qt_sources(stage):
     return records
 
 
+def qt_icu_source(stage):
+    # Qt's official 6.8.3 Linux SDK includes ICU 73.2, separate from Ubuntu ICU.
+    # The pinned Qt provisioning recipe records the binary's provenance.
+    recipe = 'https://raw.githubusercontent.com/qt/qt5/v6.8.3/coin/provisioning/qtci-linux-RHEL-8.10-x86_64/30-install_icu.sh'
+    records = [download(recipe, stage / 'qt-sdk-icu-provisioning.sh')]
+    source = 'https://github.com/unicode-org/icu/releases/download/release-73-2/icu4c-73_2-src.tgz'
+    records.append(download(source, stage / 'icu4c-73_2-src.tgz'))
+    checksums = urlopen(source.rsplit('/', 1)[0] + '/SHASUM512.txt', timeout=120).read().decode()
+    expected = next(line.split()[0] for line in checksums.splitlines() if line.endswith('icu4c-73_2-src.tgz'))
+    assert hashlib.sha512((stage / 'icu4c-73_2-src.tgz').read_bytes()).hexdigest() == expected
+    return records
+
+
 def linux_sources(stage):
     # Ubuntu's deb822 sources must offer the exact installed source versions.
     subprocess.run(['sudo', 'sed', '-i', 's/^Types: deb$/Types: deb deb-src/', '/etc/apt/sources.list.d/ubuntu.sources'], check=True)
     subprocess.run(['sudo', 'apt-get', 'update'], check=True, stdout=subprocess.DEVNULL)
     sources = set()
     for file in Path('build/release/AppDir').rglob('*.so*'):
-        if not file.is_file() or file.name.startswith(('libQt6', 'libq')):
+        if not file.is_file() or file.name.startswith(('libQt6', 'libq')) or (file.name.startswith('libicu') and '.so.73' in file.name):
             continue
         matches = output('dpkg-query', '-S', '*/' + file.name).splitlines()
         package = matches[0].split(': ')[0]
@@ -85,6 +98,7 @@ def main():
     records = qt_sources(stage)
     system = platform.system()
     if system == 'Linux':
+        records.extend(qt_icu_source(stage))
         linux_sources(stage)
     elif system == 'Windows':
         windows_sources(stage)

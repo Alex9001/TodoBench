@@ -20,6 +20,27 @@
 namespace todobench {
 namespace {
 
+std::string portable_name(const std::filesystem::path& path) {
+    const auto utf8 = path.generic_u8string();
+    return {utf8.begin(), utf8.end()};
+}
+
+int open_input_archive(struct archive* input, const std::filesystem::path& path) {
+#ifdef _WIN32
+    return archive_read_open_filename_w(input, path.c_str(), 64 * 1024);
+#else
+    return archive_read_open_filename(input, path.c_str(), 64 * 1024);
+#endif
+}
+
+int open_output_archive(struct archive* output, const std::filesystem::path& path) {
+#ifdef _WIN32
+    return archive_write_open_filename_w(output, path.c_str());
+#else
+    return archive_write_open_filename(output, path.c_str());
+#endif
+}
+
 std::string archive_error(struct archive* value) {
     const auto* message = archive_error_string(value);
     return message == nullptr ? "libarchive operation failed" : message;
@@ -39,7 +60,7 @@ bool archive_is_readable(const std::filesystem::path& archive, std::string& erro
     struct archive* input = archive_read_new();
     archive_read_support_filter_all(input);
     archive_read_support_format_7zip(input);
-    if (archive_read_open_filename(input, archive.string().c_str(), 64 * 1024) < ARCHIVE_OK) {
+    if (open_input_archive(input, archive) < ARCHIVE_OK) {
         error = archive_error(input);
         archive_read_free(input);
         return false;
@@ -101,7 +122,7 @@ bool write_directory_header(struct archive* output, const std::filesystem::path&
                             const ArchiveLimits& limits, std::string& error) {
     if (!reserve_archive_entry(entries, limits, error)) return false;
     archive_entry* entry = archive_entry_new();
-    archive_entry_set_pathname(entry, relative.generic_string().c_str());
+    archive_entry_set_pathname_utf8(entry, portable_name(relative).c_str());
     archive_entry_set_filetype(entry, AE_IFDIR);
     archive_entry_set_perm(entry, 0755);
     const auto result = archive_write_header(output, entry);
@@ -125,7 +146,7 @@ bool write_regular_file(struct archive* output, const std::filesystem::path& sou
     input.close();
     if (!reserve_archive_entry(entries, limits, error)) return false;
     archive_entry* entry = archive_entry_new();
-    archive_entry_set_pathname(entry, relative.generic_string().c_str());
+    archive_entry_set_pathname_utf8(entry, portable_name(relative).c_str());
     archive_entry_set_filetype(entry, AE_IFREG);
     archive_entry_set_perm(entry, 0644);
     archive_entry_set_size(entry, size);
@@ -164,7 +185,7 @@ bool write_directory(struct archive* output, const std::filesystem::path& root, 
             return false;
         }
         const auto kind = item.is_directory() ? ArchiveEntryType::Directory : ArchiveEntryType::RegularFile;
-        const auto safety = validate_archive_entry({item_relative.generic_string(), kind});
+        const auto safety = validate_archive_entry({portable_name(item_relative), kind});
         if (!safety.valid) {
             error = safety.error;
             return false;
@@ -218,7 +239,7 @@ bool extract_one_entry(struct archive* input, struct archive_entry* entry, const
         return false;
     }
     if (!imported_paths.add({safety.normalized_path, entry_type(entry)}, error)) return false;
-    const auto target = safety.normalized_path == "." ? staging : staging / std::filesystem::path(safety.normalized_path);
+    const auto target = safety.normalized_path == "." ? staging : staging / std::filesystem::u8path(safety.normalized_path);
     std::error_code filesystem_error;
     if (entry_type(entry) == ArchiveEntryType::Directory) {
         std::filesystem::create_directories(target, filesystem_error);
@@ -238,7 +259,7 @@ bool extract_archive_to_staging(const std::filesystem::path& archive_path, const
     struct archive* input = archive_read_new();
     archive_read_support_filter_all(input);
     archive_read_support_format_7zip(input);
-    if (archive_read_open_filename(input, archive_path.string().c_str(), 64 * 1024) < ARCHIVE_OK) {
+    if (open_input_archive(input, archive_path) < ARCHIVE_OK) {
         error = archive_error(input);
         archive_read_free(input);
         return false;
@@ -301,7 +322,7 @@ ArchiveOperationResult WorkspaceArchive::export_workspace(const std::filesystem:
     struct archive* output = archive_write_new();
     archive_write_set_format_7zip(output);
     archive_write_set_options(output, "compression=lzma");
-    if (archive_write_open_filename(output, temporary.string().c_str()) < ARCHIVE_OK) {
+    if (open_output_archive(output, temporary) < ARCHIVE_OK) {
         const auto error = archive_error(output);
         archive_write_free(output);
         return {false, archive, error};
