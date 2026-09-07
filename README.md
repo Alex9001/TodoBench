@@ -16,6 +16,7 @@
   <a href="https://github.com/Alex9001/TodoBench/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/Alex9001/TodoBench/ci.yml?branch=main&amp;label=build" alt="Build status"></a>
   <a href="https://github.com/Alex9001/TodoBench/releases/latest"><img src="https://img.shields.io/github/v/release/Alex9001/TodoBench?color=3d6ea8" alt="Latest release"></a>
   <a href="https://github.com/Alex9001/TodoBench/releases"><img src="https://img.shields.io/github/downloads/Alex9001/TodoBench/total?color=3d6ea8" alt="Release downloads"></a>
+  <a href="https://deepwiki.com/Alex9001/TodoBench"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0--or--later-53657b" alt="GPL-3.0-or-later license"></a>
   <a href="#download"><img src="https://img.shields.io/badge/Linux%20%C2%B7%20Windows%20%C2%B7%20macOS-25354a" alt="Available for Linux, Windows, and macOS"></a>
 </p>
