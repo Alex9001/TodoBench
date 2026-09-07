@@ -57,7 +57,12 @@ if command -v hdiutil >/dev/null 2>&1; then
     mkdir -p "$dmg_stage"
     cp -R "$bundle" "$dmg_stage/"
     ln -s /Applications "$dmg_stage/Applications"
-    hdiutil create -volname "TodoBench" -srcfolder "$dmg_stage" -ov -format UDZO "$output_dir/$dmg_name"
+    dmg_attempt=0
+    until hdiutil create -volname "TodoBench" -srcfolder "$dmg_stage" -ov -format UDZO "$output_dir/$dmg_name"; do
+        dmg_attempt=$((dmg_attempt + 1))
+        [ "$dmg_attempt" -lt 3 ] || exit 1
+        sleep 5
+    done
     ( cd "$output_dir" && shasum -a 256 "$dmg_name" > "TodoBench-${version}-macos-${release_arch}-dmg.sha256" )
     echo "Created $output_dir/$dmg_name"
 else

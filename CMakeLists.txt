@@ -12,7 +12,7 @@ set(CMAKE_AUTORCC ON)
 
 if(MSVC)
     add_compile_options(/utf-8)
-    add_link_options("/MANIFESTINPUT:${CMAKE_SOURCE_DIR}/packaging/windows/long-paths.manifest")
+
 endif()
 
 option(TODOBENCH_BUILD_TESTS "Build TodoBench tests" ON)
@@ -267,3 +267,14 @@ endif()
 install(DIRECTORY native/resources/icons/lucide/ DESTINATION ${CMAKE_INSTALL_DATADIR}/doc/TodoBench/lucide)
 
 install(DIRECTORY packaging/licenses/ DESTINATION ${CMAKE_INSTALL_DATADIR}/doc/TodoBench/licenses)
+
+# Let CMake merge the application manifest through its native manifest tool.
+if(MSVC)
+    get_property(native_targets DIRECTORY PROPERTY BUILDSYSTEM_TARGETS)
+    foreach(native_target IN LISTS native_targets)
+        get_target_property(native_type ${native_target} TYPE)
+        if(native_type STREQUAL "EXECUTABLE")
+            target_sources(${native_target} PRIVATE packaging/windows/long-paths.manifest)
+        endif()
+    endforeach()
+endif()
