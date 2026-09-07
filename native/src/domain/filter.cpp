@@ -38,6 +38,14 @@ std::vector<std::string> tokenize(const std::string& expression) {
 }
 
 std::string normalized(const std::string& value) {
+    if (std::all_of(value.data(), value.data() + value.size(), [](unsigned char ch) { return ch < 128; })) {
+        auto result = value;
+        for (size_t index = 0; index < result.size(); ++index) {
+            auto& ch = result.data()[index];
+            if (ch >= 'A' && ch <= 'Z') ch = static_cast<char>(ch + ('a' - 'A'));
+        }
+        return result;
+    }
     return QString::fromUtf8(value.data(), static_cast<qsizetype>(value.size()))
         .normalized(QString::NormalizationForm_KC).toCaseFolded().toUtf8().toStdString();
 }

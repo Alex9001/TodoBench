@@ -25,6 +25,7 @@ private slots:
     void projectFilterIncludesNestedProjects();
     void projectFilterAcceptsDisplayName();
     void largeFilterIndexStaysResponsive();
+    void textNormalizationPreservesUnicodeMatching();
     void monthlyRecurrenceClampsMonthEnd();
     void weeklyRecurrenceSkipsMissedSlots();
     void weeklyRecurrenceHonorsIntervalAndSelectedDays();
@@ -130,6 +131,15 @@ void DomainTest::projectFilterAcceptsDisplayName() {
     const auto compiled = compile_filter("project:\"Client Work\"");
     QVERIFY(compiled.error.empty());
     QVERIFY(matches_filter(task, compiled.spec, {{project.id, project}}));
+}
+
+void DomainTest::textNormalizationPreservesUnicodeMatching() {
+    TaskRecord task;
+    task.title = "Ｒｅｌｅａｓｅ CAFÉ";
+    QVERIFY(matches_filter(task, compile_filter("release café").spec));
+    task.title = "RELEASE review";
+    QVERIFY(matches_filter(task, compile_filter("release REVIEW").spec));
+    QVERIFY(!matches_filter(task, compile_filter("release missing").spec));
 }
 
 void DomainTest::largeFilterIndexStaysResponsive() {
