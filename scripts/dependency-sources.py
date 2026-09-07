@@ -52,8 +52,9 @@ def linux_sources(stage):
     subprocess.run(['sudo', 'sed', '-i', 's/^Types: deb$/Types: deb deb-src/', '/etc/apt/sources.list.d/ubuntu.sources'], check=True)
     subprocess.run(['sudo', 'apt-get', 'update'], check=True, stdout=subprocess.DEVNULL)
     sources = set()
+    qt_plugins = {p.name for p in (Path(os.environ['QT_ROOT_DIR']) / 'plugins').rglob('*.so')}
     for file in Path('build/release/AppDir').rglob('*.so*'):
-        if not file.is_file() or file.name.startswith(('libQt6', 'libq')) or (file.name.startswith('libicu') and '.so.73' in file.name):
+        if not file.is_file() or (file.name.startswith('libQt6') or file.name in qt_plugins) or (file.name.startswith('libicu') and '.so.73' in file.name):
             continue
         matches = output('dpkg-query', '-S', '*/' + file.name).splitlines()
         package = matches[0].split(': ')[0]
@@ -76,7 +77,7 @@ def windows_sources(stage):
 
 
 def macos_sources(stage):
-    dependencies = set(output('brew', 'deps', '--installed', '--recursive', 'yaml-cpp', 'libarchive').splitlines())
+    dependencies = set(output('brew', 'deps', '--installed', '--union', 'yaml-cpp', 'libarchive').splitlines())
     dependencies.update(('yaml-cpp', 'libarchive'))
     records = []
     for formula in sorted(dependencies):
