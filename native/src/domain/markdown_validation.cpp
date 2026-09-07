@@ -54,15 +54,15 @@ MarkdownValidationResult validate_markdown_for_visual(const std::string& markdow
     cmark_gfm_core_extensions_ensure_registered();
     auto* parser = cmark_parser_new(CMARK_OPT_DEFAULT);
     for (const auto* name : {"table", "strikethrough", "tasklist", "autolink"}) {
-        if (const auto* extension = cmark_find_syntax_extension(name); extension != nullptr) {
+        if (auto* extension = cmark_find_syntax_extension(name); extension != nullptr) {
             cmark_parser_attach_syntax_extension(parser, extension);
         }
     }
     cmark_parser_feed(parser, markdown.data(), markdown.size());
-    cmark_parser_finish(parser);
-    auto* document = cmark_parser_get_root(parser);
+    auto* document = cmark_parser_finish(parser);
     std::string message;
     const auto unsupported = document == nullptr || has_unsupported_node(document, message);
+    cmark_node_free(document);
     cmark_parser_free(parser);
     if (unsupported) return {false, message.empty() ? "Markdown cannot be parsed for visual editing" : message};
     return {true, {}};

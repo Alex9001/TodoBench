@@ -4,7 +4,16 @@
   "builtin-baseline": "04a9d8e5212d01ee1dd9478eadd9caade4f8b0d4",
   "dependencies": [
     "cmark-gfm",
-    "libarchive",
+    {
+      "name": "libarchive",
+      "default-features": false,
+      "features": [
+        "bzip2",
+        "lzma",
+        "lz4",
+        "zstd"
+      ]
+    },
     "yaml-cpp"
   ],
   "license": "GPL-3.0-or-later",
