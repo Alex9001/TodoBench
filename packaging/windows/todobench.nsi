@@ -1,7 +1,7 @@
 !include "MUI2.nsh"
 
 !ifndef VERSION
-  !define VERSION "0.1.0"
+  !error "Pass the CMake release version with /DVERSION=<version>"
 !endif
 !ifndef ARCH
   !define ARCH "x64"
