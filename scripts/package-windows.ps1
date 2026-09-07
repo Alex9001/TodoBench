@@ -16,7 +16,7 @@ if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 cmake --build $BuildDirectory --parallel
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-$Stage = Join-Path $BuildDirectory "windows-stage"
+$Stage = [System.IO.Path]::GetFullPath((Join-Path $BuildDirectory "windows-stage"))
 if (Test-Path $Stage) { Remove-Item -Recurse -Force $Stage }
 cmake --install $BuildDirectory --prefix $Stage
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

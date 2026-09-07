@@ -62,7 +62,7 @@ jobs:
         shell: bash
         run: |
           for scale in 1 2; do
-            QT_SCALE_FACTOR="$scale" TODOBENCH_THEME_SCREENSHOTS="$PWD/build/screenshots/$scale" build/release/test_main_window themesRender
+            QT_SCALE_FACTOR="$scale" TODOBENCH_THEME_SCREENSHOTS="$PWD/build/screenshots/$scale" build/release/test_main_window themesRender themeSwitchUpdatesExistingWidgets
           done
       - if: runner.os == 'Linux'
         name: Linux packages

@@ -46,6 +46,7 @@ private slots:
     void projectFilterNamesSurviveEditingAndTabSwitching();
     void themesRender_data();
     void themesRender();
+    void themeSwitchUpdatesExistingWidgets();
     void cancelThemeCustomizationPreservesSettings();
     void sampleWorkflowRenders_data();
     void sampleWorkflowRenders();
@@ -190,6 +191,53 @@ void MainWindowTest::newWorkspaceUsesSelectedFolder_data() {
     QTest::addColumn<bool>("tutorial");
     QTest::newRow("empty") << false;
     QTest::newRow("tutorial") << true;
+}
+
+namespace {
+void select_theme(MainWindow& window, const char* preset) {
+    for (auto* action : window.findChildren<QAction*>()) {
+        if (action->data().toString() == preset && action->isCheckable()) action->trigger();
+    }
+    QApplication::processEvents();
+}
+
+bool widgets_match_theme(MainWindow& window, const char* preset) {
+    const auto expected = theme_palette(preset, {}, system_theme_palette());
+    auto* filter = window.findChild<QLineEdit*>("taskFilter");
+    return filter->palette().color(QPalette::Base) == expected.color(QPalette::Base)
+        && filter->palette().color(QPalette::Text) == expected.color(QPalette::Text)
+        && window.findChild<QStackedWidget*>("detailStack")->palette().color(QPalette::WindowText) == expected.color(QPalette::WindowText)
+        && window.findChild<QTextEdit*>()->palette().color(QPalette::Base) == expected.color(QPalette::Base);
+}
+}
+
+void MainWindowTest::themeSwitchUpdatesExistingWidgets() {
+    QTemporaryDir temporary;
+    const auto root = std::filesystem::path(temporary.path().toStdString()) / "theme-switch";
+    QVERIFY(seed_task(root));
+    {
+        MainWindow window;
+        window.open_workspace(root);
+        window.resize(1280, 820);
+        auto* tree = window.findChild<QTreeView*>("taskTree");
+        tree->setCurrentIndex(tree->model()->index(0, 0));
+        window.show();
+        for (const auto* preset : {"brown", "light", "brown", "rose", "light"}) {
+            select_theme(window, preset);
+            QVERIFY(widgets_match_theme(window, preset));
+        }
+        const auto directory = qEnvironmentVariable("TODOBENCH_THEME_SCREENSHOTS");
+        if (!directory.isEmpty()) {
+            std::filesystem::create_directories(directory.toStdString());
+            QVERIFY(window.grab().save(directory + "/switched-light.png"));
+        }
+    }
+    QCOMPARE(std::get<Settings>(load_settings(root / "settings.json")).theme, std::string("light"));
+    MainWindow reopened;
+    reopened.open_workspace(root);
+    reopened.show();
+    QApplication::processEvents();
+    QVERIFY(widgets_match_theme(reopened, "light"));
 }
 
 void MainWindowTest::newWorkspaceUsesSelectedFolder() {

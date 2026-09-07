@@ -5,6 +5,7 @@
 #include <QRegularExpression>
 #include <QStyle>
 #include <QStyleFactory>
+#include <QWidget>
 #include <algorithm>
 #include <cmath>
 
@@ -165,11 +166,19 @@ QPalette theme_palette(const std::string& id, const ColorOverrides& overrides, c
 void apply_theme(const Settings& settings) {
     const auto& system = system_appearance();
     const auto& overrides = theme_overrides(settings);
+    // Qt stylesheet styles cache resolved widget palettes. Unpolish them before
+    // changing the application palette, then resolve their rules against it again.
+    std::vector<std::pair<QWidget*, QString>> stylesheets;
+    for (auto* widget : QApplication::allWidgets()) {
+        if (!widget->styleSheet().isEmpty()) stylesheets.emplace_back(widget, widget->styleSheet());
+    }
+    for (const auto& [widget, sheet] : stylesheets) widget->setStyleSheet({});
     const auto style_name = settings.theme == "system" && overrides.empty() ? system.style : QString("fusion");
     if (QApplication::style()->objectName().compare(style_name, Qt::CaseInsensitive) != 0) {
         if (auto* style = QStyleFactory::create(style_name)) QApplication::setStyle(style);
     }
     QApplication::setPalette(theme_palette(settings.theme, overrides, system.palette));
+    for (const auto& [widget, sheet] : stylesheets) widget->setStyleSheet(sheet);
 }
 
 double color_contrast(const QColor& foreground, const QColor& background) {
