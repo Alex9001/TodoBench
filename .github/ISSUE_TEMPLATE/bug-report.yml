@@ -1,0 +1,32 @@
+name: Bug report
+description: Report a reproducible problem with TodoBench.
+body:
+  - type: input
+    id: version
+    attributes:
+      label: TodoBench version
+      placeholder: v0.1.0
+    validations:
+      required: true
+  - type: input
+    id: platform
+    attributes:
+      label: Platform and package
+      placeholder: Windows 11 x64, portable ZIP
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: Include the starting and target themes and display scaling for appearance problems. Use fictional data in attachments.
+      placeholder: "1. Open a workspace…"
+    validations:
+      required: true
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Expected and actual behavior
+      description: Screenshots or a small sample workspace can help explain the difference.
+    validations:
+      required: true

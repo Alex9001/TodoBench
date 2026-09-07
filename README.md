@@ -1,92 +1,151 @@
-# TodoBench
+<p align="center">
+  <img src="packaging/icons/todobench.png" width="104" height="104" alt="TodoBench blue checklist logo">
+</p>
 
-TodoBench is a native C++20/Qt desktop task manager whose workspace is an ordinary directory of Markdown files.
+<h1 align="center">TodoBench</h1>
 
-## Development setup
+<p align="center">
+  <strong>A clear place for your tasks. An ordinary folder for your work.</strong><br>
+  A native desktop task manager with projects, subtasks, Markdown notes, and portable workspaces.<br>
+  Your tasks and attachments stay in files you can read, edit, and take with you.
+</p>
 
-Requirements:
+<p align="center">
+  <a href="https://github.com/Alex9001/TodoBench/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/Alex9001/TodoBench/ci.yml?branch=main&amp;label=build" alt="Build status"></a>
+  <a href="https://github.com/Alex9001/TodoBench/releases/latest"><img src="https://img.shields.io/github/v/release/Alex9001/TodoBench?color=3d6ea8" alt="Latest release"></a>
+  <a href="https://github.com/Alex9001/TodoBench/releases"><img src="https://img.shields.io/github/downloads/Alex9001/TodoBench/total?color=3d6ea8" alt="Release downloads"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0--or--later-53657b" alt="GPL-3.0-or-later license"></a>
+  <a href="#download"><img src="https://img.shields.io/badge/Linux%20%C2%B7%20Windows%20%C2%B7%20macOS-25354a" alt="Available for Linux, Windows, and macOS"></a>
+</p>
 
-- CMake 3.24+
-- Ninja
-- Qt 6.8+ (CI/release SDK: Qt 6.8.3)
-- vcpkg with `VCPKG_ROOT` set
-- Python 3.10+
-- `pip install -r requirements-dev.txt` (Lizard and PyYAML)
-- 7-Zip (`7z` or `7zz`) for independent interoperability tests
-- `clang-tidy` for the cognitive-complexity gate
+<p align="center">
+  <a href="https://alex9001.github.io/TodoBench/">Website</a> ·
+  <a href="#download">Download</a> ·
+  <a href="#quick-start">Quick start</a> ·
+  <a href="docs/workspace-format-v1.md">Workspace format</a> ·
+  <a href="https://github.com/Alex9001/TodoBench/issues">Issues</a>
+</p>
 
-Configure and build with vcpkg manifest mode:
+![TodoBench showing the Team project sample, nested tasks, priorities, due dates, and Markdown notes](site/assets/screenshots/team.png)
+
+<p align="center"><sub>The actual desktop app, showing the included Team project sample. Sample people and projects are fictional.</sub></p>
+
+## Keep the task and its context together
+
+TodoBench keeps your project tabs and task list beside the details of the selected task. Organize a household job, plan a move, or track a project through drafting, review, and handoff. Notes and attachments stay with the work they describe.
+
+| What you need | What TodoBench gives you |
+| --- | --- |
+| See the next step | Nested projects and subtasks, five task states, priorities, tags, and due dates |
+| Keep the details nearby | Markdown notes with **Visual**, **Source**, and **History** views, checklists, links, and attachments |
+| Focus on a slice of work | Project tabs, saved views, and filters that combine text, tags, project names, and states |
+| Remember recurring work | Date-only scheduling, calendar-based or after-completion recurrence, and reminders |
+| Make the app comfortable | Eleven appearance choices, custom colors, and Browser or Total Commander keyboard presets |
+| Keep control of your data | Ordinary Markdown and JSON files, complete `.7z` snapshots, history, trash, and conflict recovery |
+
+## Download
+
+**[TodoBench v0.1.0](https://github.com/Alex9001/TodoBench/releases/tag/v0.1.0)** is available for all four targets below. Runtime libraries are bundled; you do not need a separate Qt installation.
+
+| Platform | Install | Portable |
+| --- | --- | --- |
+| Linux x86_64 | [AppImage](https://github.com/Alex9001/TodoBench/releases/download/v0.1.0/TodoBench-0.1.0-linux-x86_64.AppImage) | [Bundled tar.gz](https://github.com/Alex9001/TodoBench/releases/download/v0.1.0/TodoBench-0.1.0-linux-x86_64.tar.gz) |
+| Windows x64 | [Per-user installer](https://github.com/Alex9001/TodoBench/releases/download/v0.1.0/TodoBench-0.1.0-windows-x64-setup.exe) | [ZIP](https://github.com/Alex9001/TodoBench/releases/download/v0.1.0/TodoBench-0.1.0-windows-x64.zip) |
+| macOS Apple Silicon | [DMG](https://github.com/Alex9001/TodoBench/releases/download/v0.1.0/TodoBench-0.1.0-macos-arm64.dmg) | [Application ZIP](https://github.com/Alex9001/TodoBench/releases/download/v0.1.0/TodoBench-0.1.0-macos-arm64.zip) |
+| macOS Intel | [DMG](https://github.com/Alex9001/TodoBench/releases/download/v0.1.0/TodoBench-0.1.0-macos-x86_64.dmg) | [Application ZIP](https://github.com/Alex9001/TodoBench/releases/download/v0.1.0/TodoBench-0.1.0-macos-x86_64.zip) |
+
+Linux packages target Ubuntu 24.04 or compatible newer systems. Make the AppImage executable before opening it; without FUSE, use `APPIMAGE_EXTRACT_AND_RUN=1`. Windows packages have no publisher certificate. macOS apps are ad-hoc signed, without notarization. See the [installation guide](docs/packaging.md#packages-and-unsigned-installation) for first-launch steps.
+
+Every release includes [SHA-256 checksums](https://github.com/Alex9001/TodoBench/releases/download/v0.1.0/SHA256SUMS), the exact application source, dependency source, and build instructions. [All releases →](https://github.com/Alex9001/TodoBench/releases)
+
+## Quick start
+
+1. **Open TodoBench.** The first-launch guide can create a workspace or open an existing folder.
+2. **Choose a starting point.** Start with an empty Inbox, everyday to-dos, a move, a team project, a website project, or the guided feature tour.
+3. **Choose an empty folder, theme, and keyboard preset.** Preview the sample before creating it. Files go directly into your chosen folder.
+4. **Make it yours.** Add a task, expand its subtasks, write notes, or use **Open tab…** to choose a project or saved view.
+
+TodoBench reopens your last workspace, tabs, and filters on launch. Return to **Help → Getting started** whenever you need the guide. Sample dates are relative to creation day and sample reminders are off.
+
+[Read the getting-started guide →](docs/getting-started.md)
+
+<table>
+  <tr><th width="50%">Everyday to-dos</th><th width="50%">Move into a new home</th></tr>
+  <tr>
+    <td><a href="site/assets/screenshots/everyday.png"><img src="site/assets/screenshots/everyday.png" alt="Everyday tasks sample with shopping, appointments, and household notes"></a></td>
+    <td><a href="site/assets/screenshots/home.png"><img src="site/assets/screenshots/home.png" alt="Moving home sample with bookings, packing, and moving-day notes"></a></td>
+  </tr>
+</table>
+
+## Workspaces you can read and take with you
+
+```text
+my-workspace/
+├── settings.json
+└── projects/
+    └── inbox/
+        ├── project.md
+        └── tasks/
+            └── plan-the-week/
+                ├── task.md
+                └── assets/
+                    └── brief.pdf
+```
+
+Task and project metadata live in YAML front matter; notes are Markdown. Settings are JSON. Stable UUIDs identify tasks and projects, folders determine project membership, and relative links keep attachments portable.
+
+- **Edit with other tools.** Metadata edits preserve note bodies byte-for-byte and retain unknown fields, including nested extensions. Unsupported Markdown remains editable in Source.
+- **Keep competing edits.** Clean external changes reload; stale saves retain competing versions for recovery. Opening or inspecting a file does not rewrite it.
+- **Export the whole workspace.** Standard `.7z` snapshots include attachments, unknown files, history, trash, and recovery material. Transient locks are excluded.
+- **Build another client.** The [workspace v1 specification](docs/workspace-format-v1.md), [representative fixtures](docs/fixtures/workspace-v1), and [independent reference test](scripts/reference-interop.py) define the public interoperability interface.
+
+TodoBench works locally without a hosted account. Automatic synchronization and merging are outside this release; see the specification before coordinating external writers.
+
+## An appearance that suits your desk
+
+Choose **View → Appearance** for System, Light, Dark, Midnight, Blue, Green, Brown, Amber, Purple, Rose, or Paper. Each preset can keep its own custom colors. Light has a white editor; named presets use consistent Qt Fusion controls.
+
+<table>
+  <tr><th width="50%">Dark</th><th width="50%">Brown</th></tr>
+  <tr>
+    <td><a href="site/assets/screenshots/dark.png"><img src="site/assets/screenshots/dark.png" alt="TodoBench in the Dark theme with recurrence and a Markdown checklist"></a></td>
+    <td><a href="site/assets/screenshots/brown.png"><img src="site/assets/screenshots/brown.png" alt="TodoBench in the Brown theme with matching task controls and notes"></a></td>
+  </tr>
+</table>
+
+[Preview themes on the website →](https://alex9001.github.io/TodoBench/#appearance)
+
+## Build from source
+
+TodoBench uses **C++20, Qt 6.8+** (release SDK: 6.8.3), CMake 3.24+, Ninja, yaml-cpp, and libarchive. Qt is supplied separately from the vcpkg manifest. Python 3.10+, the development requirements, and standalone 7-Zip are needed for validation.
 
 ```bash
-cmake --preset dev -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"
-cmake --build --preset dev
+python -m pip install -r requirements-dev.txt
+cmake --preset dev
+cmake --build --preset dev --parallel
 ctest --preset dev --output-on-failure
 python scripts/check-quality.py --build-dir build/dev
 ```
 
-The first configure may install the manifest dependencies. Qt is intentionally not part of `vcpkg.json`; provide the separately pinned Qt SDK through the normal CMake package path.
+Provide your Qt and dependency paths as described in the [build guide](docs/packaging.md#build-from-source). Windows uses MSVC and the pinned vcpkg baseline. Start the development build with `./build/dev/TodoBench`, optionally followed by a workspace path. The `asan` and `release` presets are also available.
 
-## Running TodoBench
+CI runs 17 native suites across Linux, Windows, Intel macOS, and Apple Silicon macOS, plus Linux sanitizers, complexity checks, and workflow lint. Release gates verify packaged startup, dependencies, workspace round trips, and downloaded checksums before publication.
 
-Start without an argument to choose or create a workspace from the native File menu, or open one directly:
+## Documentation and contributing
 
-```bash
-./build/dev/TodoBench /path/to/workspace
-```
-
-The main window keeps project/view tabs, instant filters, and the hierarchical task list on the left. The selected task's project, state, priority, tags, due date, recurrence, reminders, and Visual/Source/History Markdown editor are on the right. Interface layout, colors, project icons, timezone, and Browser or Total Commander keysets are stored in the workspace settings file.
-
-Sanitizer and release configurations are available as `asan` and `release` presets. Build output is under `build/<preset>` and the compile database is `build/<preset>/compile_commands.json`.
-
-## First launch and sample workspaces
-
-On first launch, a guided setup lets you create a workspace or open one you already have. You can return through **Help > Getting started**; **File > New Workspace** starts at the sample chooser.
-
-Choose a starting point, preview its tasks, select the workspace folder, choose a theme and keyboard preset, and review everything before creating files:
-
-| Starting point | What you get |
+| Guide | Covers |
 | --- | --- |
-| Start empty | An empty Inbox for your own work |
-| Everyday to-dos | 7 tasks for shopping, appointments, friends and household jobs |
-| Move into a new home | 15 tasks for bookings, packing, address changes and the first night |
-| Team project | 12 tasks for drafting, reviewing and handing off a team handbook |
-| WordPress client build | 15 tasks for business intake, assets, staging, manual construction and checks |
-| Client website build | 20 tasks for business intake, site direction, scaffolding, implementation, checks and launch |
-| Website care and local search | 19 tasks for GMB corrections, weekly posting, client approval, search reports and agreed content updates |
-| Guided feature tour | 13 exercises covering notes, filters, subtasks, recurrence, attachments, backup and task states |
+| [Getting started](docs/getting-started.md) | Samples, first launch, project tabs, filters, and custom colors |
+| [Installation and packaging](docs/packaging.md) | Platform requirements, unsigned installation, source builds, and release verification |
+| [Workspace format v1](docs/workspace-format-v1.md) | Persisted fields, safe external edits, attachment paths, and archive rules |
+| [Development](docs/development.md) | Tooling, native tests, sanitizers, and complexity gates |
+| [Contributing](CONTRIBUTING.md) | Bug reports, changes, and validation |
+| [Website maintenance](docs/website.md) | Static site build, screenshots, and GitHub Pages deployment |
 
-Samples use fictional people and ordinary working notes. Dates are relative to creation day, and sample reminders are off. The first task explains the scenario. All examples are editable Markdown files you can keep, change or move to Trash; exporting the workspace includes their attachments. Updated starting points apply to newly created samples. Existing workspaces keep their contents.
-
-Files are written **directly into your chosen folder**, without adding a folder based on the workspace name. New workspaces require an empty or new directory. Nothing is created on cancellation, and failed sample creation leaves no partially populated workspace.
-
-TodoBench remembers the last successfully opened folder and reopens it on launch, including saved tabs and filters. An explicitly supplied command-line folder takes precedence. If the last folder is missing or disconnected, setup explains the problem and lets you locate it or create another workspace. Recent folder paths are machine-local; the tasks and workspace preferences stay in your workspace folder.
-
-## Open and restore tabs
-
-Click **Open tab…** beside the task tabs to choose a project or saved view. Closing a tab leaves its project and tasks intact, so it remains available in this menu. Open views have a checkmark; selecting one switches to its tab. Nested projects show their full path. **Custom view…** opens the advanced tab dialog.
-
-## Readable project filters
-
-Project tabs and saved views show names in the search box, for example `project:Tutorial` or `project:"Tutorial / Launch example"`. Edit these names alongside title words and tags. Nested projects use their full path, and identical paths receive a numbered suffix. Saved filters retain internal project IDs so a rename preserves their scope. A deleted project's filter reads “Missing project” and continues to match no tasks.
-
-## Themes and custom colors
-
-Use **View > Appearance** for System, Light, Dark, Midnight, Blue, Green, Brown, Amber, Purple, Rose, and Paper. Light has an explicitly white editor; System restores the desktop appearance captured when the application starts. Named presets use Qt's Fusion widget style so their colors remain consistent under desktop skins.
-
-Choose **View > Appearance > Customize theme** or **Edit > Settings > Appearance** to adjust backgrounds, text, buttons, selection, borders, and links. Click a swatch for the color picker or enter `#RRGGBB`; leave a field blank to inherit its preset. Each preset remembers its own overrides in the workspace's `settings.json`. The preview updates immediately, flags low text/selection contrast, and offers individual and whole-preset resets. **OK** applies; **Cancel** discards changes. Task formatting rules and tag colors remain separate.
-
-## Workspace format
-
-A workspace contains `settings.json` and a `projects/` tree. Each project has `project.md`; each task has its own directory containing `task.md` and optional `assets/`. YAML front matter is parsed with yaml-cpp and the Markdown body is retained independently, so metadata-only saves do not rewrite note content.
-
-The authoritative [workspace v1 specification](docs/workspace-format-v1.md) and
-[fixtures](docs/fixtures/workspace-v1) explain how other clients can safely edit
-workspaces. See [build and installation instructions](docs/packaging.md).
+Found a problem or have an idea? [Open an issue](https://github.com/Alex9001/TodoBench/issues). Please include your platform, TodoBench version, and steps to reproduce a bug.
 
 ## License
 
-Copyright © 2026 TodoBench contributors. TodoBench is free software under
-**GPL-3.0-or-later**: you may redistribute and modify it under version 3 of the
-GNU General Public License, or any later version. It comes without any warranty.
-See [LICENSE](LICENSE) and [third-party notices](packaging/THIRD_PARTY_NOTICES.md).
-Release source and build instructions accompany the binaries.
+Copyright © 2026 TodoBench contributors. Free software under **GPL-3.0-or-later**. You may redistribute and modify it under version 3 of the GNU General Public License, or any later version. It comes without any warranty.
+
+See [LICENSE](LICENSE) and [third-party notices](packaging/THIRD_PARTY_NOTICES.md), including Qt and the bundled Lucide icons. Corresponding source and build instructions accompany release binaries.

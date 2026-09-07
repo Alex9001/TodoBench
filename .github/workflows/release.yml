@@ -98,6 +98,9 @@ jobs:
   verify-and-publish:
     needs: [stage, checks, package]
     runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      actions: write
     env:
       GH_TOKEN: ${{ github.token }}
       VERSION: ${{ needs.stage.outputs.version }}
@@ -111,3 +114,6 @@ jobs:
       - name: Publish verified draft
         if: inputs.publish
         run: gh release edit "v$VERSION" --draft=false --latest
+      - name: Refresh website downloads after publication
+        if: inputs.publish
+        run: gh workflow run pages.yml --ref main

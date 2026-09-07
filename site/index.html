@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f8fafc">
+  <title>TodoBench — Your tasks, your notes, your files</title>
+  <meta name="description" content="A free, open-source desktop task manager for Linux, Windows, and macOS. Organize projects, subtasks, and Markdown notes in portable folders you own.">
+  <link rel="canonical" href="https://alex9001.github.io/TodoBench/">
+  <link rel="icon" type="image/svg+xml" href="assets/todobench.svg">
+  <link rel="stylesheet" href="styles.css">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="TodoBench">
+  <meta property="og:url" content="https://alex9001.github.io/TodoBench/">
+  <meta property="og:title" content="TodoBench — Your tasks, your notes, your files">
+  <meta property="og:description" content="A clear place for your tasks. An ordinary folder for your work. Free and open source for Linux, Windows, and macOS.">
+  <meta property="og:image" content="https://alex9001.github.io/TodoBench/assets/screenshots/team.png">
+  <meta property="og:image:width" content="1280">
+  <meta property="og:image:height" content="820">
+  <meta property="og:image:alt" content="TodoBench desktop app showing a team project, subtasks, and Markdown notes">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="TodoBench — Your tasks, your notes, your files">
+  <meta name="twitter:description" content="A native desktop task manager built around portable Markdown workspaces.">
+  <meta name="twitter:image" content="https://alex9001.github.io/TodoBench/assets/screenshots/team.png">
+  <meta name="twitter:image:alt" content="TodoBench desktop app showing a team project, subtasks, and Markdown notes">
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"SoftwareApplication","name":"TodoBench","applicationCategory":"ProductivityApplication","operatingSystem":"Linux, Windows, macOS","softwareVersion":"@@VERSION@@","url":"https://alex9001.github.io/TodoBench/","downloadUrl":"@@RELEASE_URL@@","license":"https://github.com/Alex9001/TodoBench/blob/main/LICENSE","isAccessibleForFree":true,"offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"screenshot":"https://alex9001.github.io/TodoBench/assets/screenshots/team.png","description":"A native desktop task manager with projects, subtasks, Markdown notes, and portable workspaces."}
+  </script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header">
+    <div class="shell header-inner">
+      <a class="brand" href="#top" aria-label="TodoBench home"><img src="assets/todobench.svg" width="34" height="34" alt=""><span>TodoBench</span></a>
+      <nav aria-label="Main navigation">
+        <a href="#features">Features</a><a href="#workspace">Your files</a><a href="#appearance">Themes</a><a class="nav-source" href="https://github.com/Alex9001/TodoBench">GitHub <span aria-hidden="true">↗</span></a><a class="button small" href="#download">Download</a>
+      </nav>
+    </div>
+  </header>
+  <main id="main">
+    <section class="hero shell" id="top">
+      <a class="release-pill" href="@@RELEASE_URL@@"><span class="status-dot"></span> v@@VERSION@@ is available <span aria-hidden="true">→</span></a>
+      <p class="eyebrow">A little more order. A little more room to think.</p>
+      <h1>Your tasks. Your notes.<br><span>Your files.</span></h1>
+      <p class="hero-description">A clear place for everything you need to do, with the details right beside it. A native desktop app built around ordinary Markdown folders.</p>
+      <div class="actions"><a class="button" href="#download">Download TodoBench <span aria-hidden="true">↓</span></a><a class="button secondary" href="https://github.com/Alex9001/TodoBench">Explore on GitHub <span aria-hidden="true">↗</span></a></div>
+      <p class="hero-meta">Linux · Windows · macOS <span aria-hidden="true">/</span> Free &amp; open source <span aria-hidden="true">/</span> No account needed</p>
+      <figure class="hero-shot">
+        <div class="screenshot-bar"><span><span class="window-dot"></span> A workspace for the work ahead</span><span>Team project · Light</span></div>
+        <a class="screenshot-link" href="assets/screenshots/team.png" data-preview aria-label="Enlarge the TodoBench team project screenshot"><img src="assets/screenshots/team.png" alt="TodoBench with a team handbook project: nested tasks and due dates on the left, task details and Markdown notes on the right" width="1280" height="820" fetchpriority="high"></a>
+        <figcaption>The actual TodoBench app, with an included sample workspace. <span>Click to take a closer look.</span></figcaption>
+      </figure>
+    </section>
+    <div class="principles shell" aria-label="Built around open formats"><span>Native desktop</span><span>Readable Markdown</span><span>Portable attachments</span><span>Open workspace format</span></div>
+
+    <section class="section shell" id="features">
+      <div class="section-heading"><p class="eyebrow">Keep the whole picture</p><h2>The next step.<br>And everything behind it.</h2><p>A task can be a quick errand or one part of a much bigger plan. Keep the structure, notes, and follow-up together.</p></div>
+      <div class="features-grid">
+        <article><span class="feature-number">01 / ORGANIZE</span><h3>Give the work a shape.</h3><p>Group tasks into projects, break them into subtasks, and track progress with states, priorities, tags, and due dates.</p><div class="task-example" aria-label="Example task hierarchy"><div><span class="check checked" aria-hidden="true">✓</span> Plan the handbook update <span class="tag">Done</span></div><div><span class="check" aria-hidden="true"></span> Draft the first-week guide</div><div class="subtask"><span class="check" aria-hidden="true"></span> Check the team contact list</div></div></article>
+        <article><span class="feature-number">02 / KEEP CONTEXT</span><h3>A note belongs with its task.</h3><p>Write in the visual Markdown editor, edit the source, and revisit history. Add checklists, links, and attachments without losing your place.</p><div class="editor-example"><div><span>Visual</span><span>Source</span><span>History</span></div><strong>Before we hand this over</strong><p>Review the draft, check the details,<br>and attach the final brief.</p></div></article>
+        <article><span class="feature-number">03 / FOCUS</span><h3>Find your slice of the day.</h3><p>Switch between project tabs and saved views. Combine words, tags, project names, and task states to bring the right work into view.</p><code class="filter-example">tag:review status:todo</code></article>
+        <article><span class="feature-number">04 / FOLLOW THROUGH</span><h3>Make room for the repeat jobs.</h3><p>Set a due date, add reminders, and repeat tasks on a calendar schedule or after completion. Keep routine work alongside everything else.</p><div class="schedule-example"><span>Weekly review</span><strong>Every week</strong><span>Due dates · Recurrence · Reminders</span></div></article>
+      </div>
+    </section>
+
+    <section class="workspace-section" id="workspace">
+      <div class="shell workspace-layout">
+        <div><p class="eyebrow">An ordinary folder. On purpose.</p><h2>Your work has<br>a home you own.</h2><p>Open your workspace in a file manager and it makes sense. Tasks and project notes are Markdown. Settings are JSON. Attachments live alongside the tasks they belong to.</p><ul class="check-list"><li>Read and edit your files with other tools.</li><li>Keep stable identities and relative attachment links.</li><li>Export the whole workspace as a standard .7z archive.</li><li>Retain history, trash, and competing edits for recovery.</li></ul><a class="text-link" href="https://github.com/Alex9001/TodoBench/blob/main/docs/workspace-format-v1.md">Explore the workspace specification <span aria-hidden="true">↗</span></a></div>
+        <div class="file-window"><div class="file-window-title"><span class="status-dot"></span> my-workspace/ <span>ON YOUR DISK</span></div><pre aria-label="Example workspace folder structure"><code>my-workspace/
+├── <span>settings.json</span>
+└── projects/
+    └── inbox/
+        ├── <span>project.md</span>
+        └── tasks/
+            └── plan-the-week/
+                ├── <span>task.md</span>
+                └── assets/
+                    └── brief.pdf</code></pre><div class="file-window-footer"><span>.md</span><span>.json</span><span>.7z</span><p>Open formats, all the way down.</p></div></div>
+      </div>
+    </section>
+
+    <section class="section shell" id="get-started">
+      <div class="section-heading"><p class="eyebrow">Make yourself at home</p><h2>Start with something familiar.</h2><p>Choose an empty Inbox or an editable sample. Everyday jobs, a house move, a team project, website work, and a guided feature tour are ready to try.</p></div>
+      <div class="sample-grid">
+        <figure><a class="screenshot-link" href="assets/screenshots/everyday.png" data-preview aria-label="Enlarge the everyday to-dos screenshot"><img src="assets/screenshots/everyday.png" alt="Everyday to-dos sample with household tasks and working notes" width="1280" height="820" loading="lazy"></a><figcaption><strong>The everyday things</strong><span>Shopping, appointments, friends, and household jobs.</span></figcaption></figure>
+        <figure><a class="screenshot-link" href="assets/screenshots/home.png" data-preview aria-label="Enlarge the moving-home screenshot"><img src="assets/screenshots/home.png" alt="Moving-home sample with bookings, packing, and moving-day notes" width="1280" height="820" loading="lazy"></a><figcaption><strong>The bigger life projects</strong><span>Bookings, packing, address changes, and the first night.</span></figcaption></figure>
+      </div>
+      <ol class="steps"><li><span>01</span><div><h3>Choose a starting point</h3><p>Preview a sample or begin with an empty workspace.</p></div></li><li><span>02</span><div><h3>Pick your folder and theme</h3><p>Files go directly into the empty folder you choose.</p></div></li><li><span>03</span><div><h3>Get on with your day</h3><p>Add your work. Your tabs and filters return next time.</p></div></li></ol>
+      <p class="section-note">Sample people and projects are fictional. Dates adjust to creation day; sample reminders start off. <a href="https://github.com/Alex9001/TodoBench/blob/main/docs/getting-started.md">Getting-started guide ↗</a></p>
+    </section>
+
+    <section class="appearance-section" id="appearance">
+      <div class="shell">
+        <div class="appearance-heading"><div><p class="eyebrow">Settle into your workspace</p><h2>A little more you.</h2><p>Eleven appearance choices, with custom colors for each preset.<br>Preview four of them in the actual app.</p></div><div class="theme-picker" role="group" aria-label="Preview an application theme"><button type="button" data-theme="light" aria-pressed="true"><span class="swatch light"></span>Light</button><button type="button" data-theme="dark" aria-pressed="false"><span class="swatch dark"></span>Dark</button><button type="button" data-theme="brown" aria-pressed="false"><span class="swatch brown"></span>Brown</button><button type="button" data-theme="paper" aria-pressed="false"><span class="swatch paper"></span>Paper</button></div></div>
+        <figure class="theme-preview"><a class="screenshot-link" href="assets/screenshots/light.png" data-preview id="theme-link" aria-label="Enlarge the selected theme screenshot"><img id="theme-image" src="assets/screenshots/light.png" alt="TodoBench in the Light theme, showing task recurrence and a Markdown checklist" width="1280" height="820" loading="lazy"></a><figcaption id="theme-caption" aria-live="polite">Light theme · Choose View → Appearance in TodoBench.</figcaption></figure>
+        <noscript><p>Theme screenshots: <a href="assets/screenshots/dark.png">Dark</a> · <a href="assets/screenshots/brown.png">Brown</a> · <a href="assets/screenshots/paper.png">Paper</a></p></noscript>
+      </div>
+    </section>
+
+    <section class="section shell" id="download">
+      <div class="section-heading centered"><p class="eyebrow">Ready when you are</p><h2>A place for your next step.</h2><p>Download TodoBench v@@VERSION@@. Free, open source, and built for your desktop.</p></div>
+      <div class="download-grid">
+        <article><p class="platform-label">LINUX</p><h3>Linux</h3><p>x86_64 · Ubuntu 24.04 or compatible newer systems</p><a class="button" href="@@DOWNLOAD_BASE@@/TodoBench-@@VERSION@@-linux-x86_64.AppImage">Download AppImage <span aria-hidden="true">↓</span></a><a class="portable-link" href="@@DOWNLOAD_BASE@@/TodoBench-@@VERSION@@-linux-x86_64.tar.gz">Portable tar.gz</a><small>Make the AppImage executable. Without FUSE, use <code>APPIMAGE_EXTRACT_AND_RUN=1</code>.</small></article>
+        <article><p class="platform-label">WINDOWS</p><h3>Windows</h3><p>x64 · Per-user installation<br>No administrator privileges needed</p><a class="button" href="@@DOWNLOAD_BASE@@/TodoBench-@@VERSION@@-windows-x64-setup.exe">Download installer <span aria-hidden="true">↓</span></a><a class="portable-link" href="@@DOWNLOAD_BASE@@/TodoBench-@@VERSION@@-windows-x64.zip">Portable ZIP</a><small>No publisher certificate. See the installation guide for first-launch prompts.</small></article>
+        <article><p class="platform-label">MACOS</p><h3>macOS</h3><p>Separate builds for<br>Apple Silicon and Intel</p><a class="button" href="@@DOWNLOAD_BASE@@/TodoBench-@@VERSION@@-macos-arm64.dmg">Apple Silicon DMG <span aria-hidden="true">↓</span></a><a class="portable-link" href="@@DOWNLOAD_BASE@@/TodoBench-@@VERSION@@-macos-arm64.zip">Apple Silicon ZIP</a><a class="button secondary" href="@@DOWNLOAD_BASE@@/TodoBench-@@VERSION@@-macos-x86_64.dmg">Intel DMG <span aria-hidden="true">↓</span></a><a class="portable-link" href="@@DOWNLOAD_BASE@@/TodoBench-@@VERSION@@-macos-x86_64.zip">Intel ZIP</a><small>Ad-hoc signed; not notarized. Copy the app to Applications before opening.</small></article>
+      </div>
+      <div class="download-help"><a href="https://github.com/Alex9001/TodoBench/blob/main/docs/packaging.md#packages-and-unsigned-installation">Installation help ↗</a><a href="@@DOWNLOAD_BASE@@/SHA256SUMS">SHA-256 checksums ↓</a><a href="@@RELEASE_URL@@">Release notes &amp; all assets ↗</a><a href="@@DOWNLOAD_BASE@@/TodoBench-@@VERSION@@-source.tar.gz">Exact source ↓</a></div>
+      <div class="source-callout"><div><h3>Build it, inspect it, make it your own.</h3><p>C++20 and Qt. A documented workspace format. Corresponding source and dependency notices with every release.</p></div><a class="button secondary" href="https://github.com/Alex9001/TodoBench/blob/main/docs/packaging.md#build-from-source">Build from source <span aria-hidden="true">↗</span></a></div>
+    </section>
+
+    <section class="faq-section shell" id="questions"><div><p class="eyebrow">A few useful details</p><h2>Before you begin.</h2></div><div class="faq-list">
+      <details><summary>Do I need an account or a connection?</summary><p>No hosted account is required. Your workspace is a local folder, and task management works offline. You need a connection to download the app or visit external links.</p></details>
+      <details><summary>Can I edit my workspace with another app?</summary><p>Yes. Tasks and project notes use Markdown with YAML front matter, and settings use JSON. Other writers should follow the <a href="https://github.com/Alex9001/TodoBench/blob/main/docs/workspace-format-v1.md">workspace v1 specification</a> for identities, revisions, locking, and conflict handling. Unknown fields and untouched note bodies are preserved during metadata edits.</p></details>
+      <details><summary>Does TodoBench synchronize between devices?</summary><p>Automatic synchronization and merging are outside v@@VERSION@@. You can transfer a complete workspace folder or export a standard .7z snapshot, including attachments, history, trash, and recovery material. Avoid concurrent writers unless they follow the documented coordination rules.</p></details>
+      <details><summary>Will I lose my files if I stop using TodoBench?</summary><p>Your workspace remains an ordinary folder of readable files. Relative attachment links keep supporting files with their tasks. Uninstalling the app leaves workspaces outside its installation folder intact.</p></details>
+      <details><summary>Is TodoBench free to use and modify?</summary><p>Yes. TodoBench is free software under <a href="https://github.com/Alex9001/TodoBench/blob/main/LICENSE">GPL-3.0-or-later</a>. You can use, study, modify, and redistribute it under the license terms. Releases include source and build instructions.</p></details>
+    </div></section>
+  </main>
+  <footer class="site-footer"><div class="shell footer-top"><div><a class="brand" href="#top"><img src="assets/todobench.svg" width="34" height="34" alt=""><span>TodoBench</span></a><p>Your tasks. Your notes. Your files.</p></div><div><strong>Get started</strong><a href="#download">Download</a><a href="https://github.com/Alex9001/TodoBench/blob/main/docs/getting-started.md">User guide</a><a href="@@RELEASE_URL@@">Release notes</a></div><div><strong>Open by design</strong><a href="https://github.com/Alex9001/TodoBench">Source code</a><a href="https://github.com/Alex9001/TodoBench/blob/main/docs/workspace-format-v1.md">Workspace format</a><a href="https://github.com/Alex9001/TodoBench/blob/main/CONTRIBUTING.md">Contribute</a></div><div><strong>Project</strong><a href="https://github.com/Alex9001/TodoBench/issues">Report an issue</a><a href="https://github.com/Alex9001/TodoBench/blob/main/LICENSE">License</a><a href="https://github.com/Alex9001/TodoBench/blob/main/packaging/THIRD_PARTY_NOTICES.md">Third-party notices</a></div></div><div class="shell footer-bottom"><span>© 2026 TodoBench contributors · GPL-3.0-or-later</span><span>Made for the work in front of you.</span></div></footer>
+  <dialog id="screenshot-dialog" aria-labelledby="preview-title"><div class="dialog-bar"><strong id="preview-title">TodoBench screenshot</strong><div><a id="original-link" href="assets/screenshots/team.png" target="_blank" rel="noopener">Open original ↗</a><button id="close-preview" type="button" aria-label="Close screenshot preview">Close <span aria-hidden="true">×</span></button></div></div><img id="preview-image" src="assets/screenshots/team.png" alt="" width="1280" height="820"></dialog>
+</body>
+</html>
