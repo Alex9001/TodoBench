@@ -123,6 +123,7 @@ SaveResult WorkspaceStore::save_project(const ProjectRecord& project) const {
     if (error) return {SaveStatus::Error, path.string(), error.message()};
     std::ifstream input(path, std::ios::binary);
     const std::string current((std::istreambuf_iterator<char>(input)), std::istreambuf_iterator<char>());
+    input.close();
     if (!project.source_hash.empty() && hash_bytes(current) != project.source_hash) {
         std::string message;
         const auto retained = retain_conflict(root_, project.id, current, serialize_project_markdown(project), message);
@@ -146,6 +147,7 @@ SaveResult WorkspaceStore::save_task(const TaskRecord& task) const {
         if (std::filesystem::exists(path)) return {SaveStatus::Error, path.string(), "unable to read task before saving"};
     }
     const std::string current((std::istreambuf_iterator<char>(input)), std::istreambuf_iterator<char>());
+    input.close();
     if (!task.source_hash.empty() && hash_bytes(current) != task.source_hash) {
         return {SaveStatus::Conflict, path.string(), "task changed on disk while it was being edited"};
     }

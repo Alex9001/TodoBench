@@ -110,7 +110,7 @@ if(TODOBENCH_BUILD_TESTS)
     find_package(Python3 REQUIRED COMPONENTS Interpreter)
     add_executable(test_interoperability native/tests/test_interoperability.cpp native/src/app/markdown_editor.cpp)
     target_link_libraries(test_interoperability PRIVATE todobench_core Qt6::Test)
-    add_test(NAME test_interoperability COMMAND test_interoperability)
+    add_test(NAME test_interoperability COMMAND test_interoperability -o -,txt)
     set_tests_properties(test_interoperability PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
     add_executable(interop_driver native/tests/interop_driver.cpp)
     target_link_libraries(interop_driver PRIVATE todobench_core)
@@ -119,22 +119,22 @@ if(TODOBENCH_BUILD_TESTS)
     add_executable(test_front_matter native/tests/test_front_matter.cpp)
     target_link_libraries(test_front_matter PRIVATE todobench_core Qt6::Test)
     target_compile_features(test_front_matter PRIVATE cxx_std_20)
-    add_test(NAME test_front_matter COMMAND test_front_matter)
+    add_test(NAME test_front_matter COMMAND test_front_matter -o -,txt)
 
     add_executable(test_project_filter_labels native/tests/test_project_filter_labels.cpp)
     target_link_libraries(test_project_filter_labels PRIVATE todobench_core Qt6::Test)
-    add_test(NAME test_project_filter_labels COMMAND test_project_filter_labels)
+    add_test(NAME test_project_filter_labels COMMAND test_project_filter_labels -o -,txt)
 
     add_executable(test_domain native/tests/test_domain.cpp)
     target_link_libraries(test_domain PRIVATE todobench_core Qt6::Test)
     target_compile_features(test_domain PRIVATE cxx_std_20)
-    add_test(NAME test_domain COMMAND test_domain)
+    add_test(NAME test_domain COMMAND test_domain -o -,txt)
 
     add_executable(test_reliable_storage native/tests/test_reliable_storage.cpp)
     target_link_libraries(test_reliable_storage PRIVATE todobench_core Qt6::Widgets Qt6::Test)
     target_sources(test_reliable_storage PRIVATE native/src/app/workspace_controller.cpp)
     target_compile_features(test_reliable_storage PRIVATE cxx_std_20)
-    add_test(NAME test_reliable_storage COMMAND test_reliable_storage)
+    add_test(NAME test_reliable_storage COMMAND test_reliable_storage -o -,txt)
 
     add_executable(test_editor_attachment
         native/tests/test_editor_attachment.cpp
@@ -142,44 +142,44 @@ if(TODOBENCH_BUILD_TESTS)
     )
     target_link_libraries(test_editor_attachment PRIVATE todobench_core Qt6::Widgets Qt6::Test)
     target_compile_features(test_editor_attachment PRIVATE cxx_std_20)
-    add_test(NAME test_editor_attachment COMMAND test_editor_attachment)
+    add_test(NAME test_editor_attachment COMMAND test_editor_attachment -o -,txt)
 
     add_executable(test_task_commands native/tests/test_task_commands.cpp)
     target_link_libraries(test_task_commands PRIVATE todobench_core Qt6::Widgets Qt6::Test)
     target_sources(test_task_commands PRIVATE native/src/app/workspace_controller.cpp)
     target_compile_features(test_task_commands PRIVATE cxx_std_20)
-    add_test(NAME test_task_commands COMMAND test_task_commands)
+    add_test(NAME test_task_commands COMMAND test_task_commands -o -,txt)
 
     add_executable(test_views native/tests/test_views.cpp)
     target_link_libraries(test_views PRIVATE todobench_core Qt6::Test)
     target_compile_features(test_views PRIVATE cxx_std_20)
-    add_test(NAME test_views COMMAND test_views)
+    add_test(NAME test_views COMMAND test_views -o -,txt)
 
     add_executable(test_archive native/tests/test_archive.cpp)
     target_link_libraries(test_archive PRIVATE todobench_core Qt6::Test)
     target_compile_features(test_archive PRIVATE cxx_std_20)
-    add_test(NAME test_archive COMMAND test_archive)
+    add_test(NAME test_archive COMMAND test_archive -o -,txt)
 
     add_executable(test_theme native/tests/test_theme.cpp)
     target_link_libraries(test_theme PRIVATE todobench_theme Qt6::Test)
-    add_test(NAME test_theme COMMAND test_theme)
+    add_test(NAME test_theme COMMAND test_theme -o -,txt)
 
     add_executable(test_sample_workspaces native/tests/test_sample_workspaces.cpp)
     target_link_libraries(test_sample_workspaces PRIVATE todobench_core Qt6::Test)
-    add_test(NAME test_sample_workspaces COMMAND test_sample_workspaces)
+    add_test(NAME test_sample_workspaces COMMAND test_sample_workspaces -o -,txt)
 
     add_executable(test_onboarding native/tests/test_onboarding.cpp native/src/app/onboarding_wizard.cpp)
     target_link_libraries(test_onboarding PRIVATE todobench_theme Qt6::Test)
-    add_test(NAME test_onboarding COMMAND test_onboarding)
+    add_test(NAME test_onboarding COMMAND test_onboarding -o -,txt)
 
     add_executable(test_tutorial_workspace native/tests/test_tutorial_workspace.cpp)
     target_link_libraries(test_tutorial_workspace PRIVATE todobench_core Qt6::Test)
-    add_test(NAME test_tutorial_workspace COMMAND test_tutorial_workspace)
+    add_test(NAME test_tutorial_workspace COMMAND test_tutorial_workspace -o -,txt)
 
     add_executable(test_workspace_scanner native/tests/test_workspace_scanner.cpp)
     target_link_libraries(test_workspace_scanner PRIVATE todobench_core Qt6::Test)
     target_compile_features(test_workspace_scanner PRIVATE cxx_std_20)
-    add_test(NAME test_workspace_scanner COMMAND test_workspace_scanner)
+    add_test(NAME test_workspace_scanner COMMAND test_workspace_scanner -o -,txt)
 
     add_executable(test_task_schedule_editor
         native/tests/test_task_schedule_editor.cpp
@@ -187,7 +187,7 @@ if(TODOBENCH_BUILD_TESTS)
     )
     target_link_libraries(test_task_schedule_editor PRIVATE todobench_core Qt6::Widgets Qt6::Test)
     target_compile_features(test_task_schedule_editor PRIVATE cxx_std_20)
-    add_test(NAME test_task_schedule_editor COMMAND test_task_schedule_editor)
+    add_test(NAME test_task_schedule_editor COMMAND test_task_schedule_editor -o -,txt)
 
     add_executable(test_main_window
         native/tests/test_main_window.cpp
@@ -200,7 +200,7 @@ if(TODOBENCH_BUILD_TESTS)
     )
     target_link_libraries(test_main_window PRIVATE todobench_theme Qt6::Gui Qt6::Widgets Qt6::Network Qt6::Test)
     target_compile_features(test_main_window PRIVATE cxx_std_20)
-    add_test(NAME test_main_window COMMAND test_main_window)
+    add_test(NAME test_main_window COMMAND test_main_window -o -,txt)
 
     set_tests_properties(
         test_front_matter

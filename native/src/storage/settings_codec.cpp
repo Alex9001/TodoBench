@@ -359,6 +359,7 @@ bool save_settings(const std::filesystem::path& path, const Settings& settings, 
     const auto object = preserve_extensions(settings.original_json, settings.recognized_json, recognized).toObject();
     std::ifstream input(path, std::ios::binary);
     const std::string current((std::istreambuf_iterator<char>(input)), std::istreambuf_iterator<char>());
+    input.close();
     const auto bytes = QJsonDocument(object).toJson(QJsonDocument::Indented);
     if (!settings.source_hash.empty() && WorkspaceStore::hash_bytes(current) != settings.source_hash) {
         retain_conflict(path.parent_path(), "settings", current, bytes.toStdString(), error);

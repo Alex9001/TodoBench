@@ -65,7 +65,7 @@ def main():
     fixture = Path(__file__).resolve().parents[1] / 'docs/fixtures/workspace-v1'
     with tempfile.TemporaryDirectory() as temp:
         root = Path(temp)
-        run = lambda *args: subprocess.run(args, check=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        run = lambda *args: subprocess.run(args, check=True, stderr=subprocess.STDOUT)
         run(driver, 'export', str(fixture), str(root / 'snapshot.7z'))
         run(seven, 'x', str(root / 'snapshot.7z'), '-o' + str(root / 'external'))
         independent_edit(root / 'external')
