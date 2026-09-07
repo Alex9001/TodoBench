@@ -6,6 +6,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import unicodedata
 import yaml
 
 
@@ -31,12 +32,15 @@ def independent_edit(root):
 
 
 def verify(before, after):
-    assert {p.relative_to(before) for p in before.rglob('*') if p.is_file()} == {
-        p.relative_to(after) for p in after.rglob('*') if p.is_file()}
+    # macOS tools/filesystems can use canonically equivalent decomposed names.
+    names = lambda root: {unicodedata.normalize('NFC', p.relative_to(root).as_posix()): p
+                          for p in root.rglob('*') if p.is_file()}
+    originals, imported = names(before), names(after)
+    assert originals.keys() == imported.keys(), (originals.keys() - imported.keys(), imported.keys() - originals.keys())
     for path in before.rglob('*'):
         if not path.is_file():
             continue
-        other = after / path.relative_to(before)
+        other = imported[unicodedata.normalize('NFC', path.relative_to(before).as_posix())]
         if path.suffix == '.md':
             old, old_body = document(path)
             new, new_body = document(other)
