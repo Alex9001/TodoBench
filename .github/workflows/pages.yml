@@ -30,12 +30,23 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  refresh-after-release:
+    if: github.event_name == 'release'
+    runs-on: ubuntu-24.04
+    permissions:
+      actions: write
+    steps:
+      - name: Deploy from main instead of the release tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: gh workflow run pages.yml --ref main
+
   build:
+    if: github.event_name != 'release'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-        with:
-          ref: ${{ github.event_name == 'release' && 'main' || github.ref }}
       - name: Build and validate against the latest published release
         run: python3 scripts/build-site.py
         env:
@@ -48,7 +59,7 @@ jobs:
           path: build/pages
 
   deploy:
-    if: github.event_name != 'pull_request'
+    if: github.event_name != 'pull_request' && github.event_name != 'release'
     needs: build
     runs-on: ubuntu-24.04
     permissions:

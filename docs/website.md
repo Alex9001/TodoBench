@@ -37,8 +37,10 @@ with `node --check site/app.js`; lint the workflow with `actionlint`.
 
 GitHub Pages is configured to use **GitHub Actions**. `.github/workflows/pages.yml`
 validates pull requests, and deploys changes on `main` or a manual run. Publishing
-an application release also refreshes the site from `main` using the new release's
-asset inventory. When a release is published using the repository's automatic
+an application release dispatches a site deployment from `main`, keeping the
+GitHub Pages environment's branch restrictions intact instead of deploying from
+the release tag. The build uses the new release's asset inventory.
+When a release is published using the repository's automatic
 `GITHUB_TOKEN`, GitHub may suppress a downstream release event; the release
 workflow explicitly dispatches Pages after publication to cover that path.
 A missing required asset fails the build and leaves the existing site in place.
