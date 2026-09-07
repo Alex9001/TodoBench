@@ -1,3 +1,5 @@
+![TodoBench — native Markdown workspace task manager for Linux, Windows, and macOS](docs/images/todobench-preview.png)
+
 <p align="center">
   <img src="packaging/icons/todobench.png" width="104" height="104" alt="TodoBench blue checklist logo">
 </p>
