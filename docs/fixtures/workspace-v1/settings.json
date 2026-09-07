@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "workspace_name": "Reference",
+  "timezone": "UTC",
+  "saved_views": [
+    {
+      "name": "Reference",
+      "filter_expression": "tag:reference",
+      "sort": "manual",
+      "x-mobile": {
+        "nested": [
+          1,
+          true
+        ]
+      }
+    }
+  ],
+  "x-mobile": {
+    "nested": {
+      "keep": true
+    }
+  }
+}

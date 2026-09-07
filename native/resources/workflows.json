@@ -1,0 +1,1133 @@
+[
+  {
+    "id": "blank",
+    "name": "Start empty",
+    "description": "A clean Inbox for your own tasks. No example tasks are created.",
+    "features": "One list • Your own tasks",
+    "projects": [],
+    "tasks": [],
+    "views": [],
+    "active": "inbox"
+  },
+  {
+    "id": "simple",
+    "name": "Everyday to-dos",
+    "description": "A short list for errands, household jobs and the week ahead. Try notes and checklists at your own pace.",
+    "features": "7 tasks • One list • Notes and checklists",
+    "projects": [],
+    "tasks": [
+      {
+        "key": "week",
+        "project": "inbox",
+        "title": "Plan the week ahead",
+        "body": "# A manageable week\n\nFit a few errands around work and leave room for things that come up. These are editable examples; replace them with your own plans.\n\n- [ ] Check the calendar before making appointments\n- [ ] Combine errands into one trip\n- [ ] Choose three dinners\n\n## Try this in TodoBench\n\nUse **New Task** to capture something and **Complete / Reopen** to finish it. Notes save automatically. **Open tab…** brings back a closed list.",
+        "tags": []
+      },
+      {
+        "key": "groceries",
+        "project": "inbox",
+        "title": "Buy ingredients for three dinners",
+        "body": "- [ ] Check the fridge and cupboard\n- [ ] Add vegetables, rice and pasta to the shopping list\n- [ ] Pick up breakfast supplies\n\nChoose meals that use up what is already open.",
+        "tags": []
+      },
+      {
+        "key": "library",
+        "project": "inbox",
+        "title": "Return the library books",
+        "body": "The books are on the hallway shelf. Put them in the bag before leaving and check whether the reserved book is ready to collect.",
+        "tags": []
+      },
+      {
+        "key": "bike",
+        "project": "inbox",
+        "title": "Book a bicycle service",
+        "body": "The rear brake is rubbing. Call the repair shop, describe the problem and ask which day to bring the bike in.",
+        "tags": []
+      },
+      {
+        "key": "dinner",
+        "project": "inbox",
+        "title": "Arrange dinner with friends",
+        "body": "Suggest Sunday evening and ask about food preferences before choosing a menu. Record the confirmed time here.",
+        "tags": []
+      },
+      {
+        "key": "desk",
+        "project": "inbox",
+        "title": "Sort the household paperwork",
+        "body": "File the current bills and receipts, scan anything needed later and recycle old envelopes. Put any unanswered letters on a separate list.",
+        "tags": []
+      },
+      {
+        "key": "bag",
+        "project": "inbox",
+        "title": "Pack reusable shopping bags",
+        "body": "Two shopping bags and a small insulated bag are ready by the door for the next trip.",
+        "status": "done",
+        "tags": []
+      }
+    ],
+    "views": [],
+    "active": "inbox"
+  },
+  {
+    "id": "home",
+    "name": "Move into a new home",
+    "description": "Organise bookings, packing, address changes and the first night in a new place.",
+    "features": "15 tasks • Project groups • Subtasks • Due dates • Saved views",
+    "projects": [
+      {
+        "key": "home",
+        "name": "Moving home",
+        "parent": ""
+      },
+      {
+        "key": "packing",
+        "name": "Packing",
+        "parent": "home"
+      },
+      {
+        "key": "settling",
+        "name": "New home",
+        "parent": "home"
+      }
+    ],
+    "tasks": [
+      {
+        "key": "plan",
+        "project": "home",
+        "title": "Plan moving day",
+        "body": "# Moving day plan\n\nThe move is three weeks away. Arrange transport, pack by room and keep the essentials easy to reach. These example dates can be changed to your own moving day.\n\n## Try this in TodoBench\n\nExpand the kitchen task for its subtasks. Open **Waiting for replies** under **Open tab…** to chase bookings. Complete the weekly review to advance its date.",
+        "status": "in_progress",
+        "priority": "high",
+        "due": 21
+      },
+      {
+        "key": "van",
+        "project": "home",
+        "title": "Confirm the removal van booking",
+        "body": "The removal company is checking availability. Confirm the arrival time, loading access and what is included before accepting the booking.",
+        "status": "waiting",
+        "due": 3
+      },
+      {
+        "key": "access",
+        "project": "home",
+        "title": "Arrange access to the new home",
+        "body": "Confirm when the keys can be collected and where the van can park. Record the contact person and any access instructions here.",
+        "due": 4
+      },
+      {
+        "key": "boxes",
+        "project": "packing",
+        "title": "Collect boxes and packing materials",
+        "body": "Get sturdy boxes, tape and labels. Keep small boxes for books and mark each box with the room it belongs in.",
+        "due": 5,
+        "tags": [
+          "packing"
+        ]
+      },
+      {
+        "key": "kitchen",
+        "project": "packing",
+        "title": "Pack the kitchen",
+        "body": "Leave out a pan, two plates, mugs and the kettle for the final evening. Pack the rest by cupboard so it is easier to unpack.",
+        "due": 17,
+        "tags": [
+          "packing"
+        ]
+      },
+      {
+        "key": "glass",
+        "project": "packing",
+        "title": "Wrap mugs and glassware",
+        "body": "Wrap breakable items separately and fill empty space with tea towels. Label the box on two sides.",
+        "parent": "kitchen",
+        "due": 16
+      },
+      {
+        "key": "food",
+        "project": "packing",
+        "title": "Sort the pantry",
+        "body": "Use up open food before the move. Put breakfast supplies in a separate bag and check which unopened items can be donated.",
+        "parent": "kitchen",
+        "due": 15
+      },
+      {
+        "key": "essentials",
+        "project": "packing",
+        "title": "Pack the first-night bag",
+        "body": "- [ ] Chargers and extension lead\n- [ ] Toiletries and towels\n- [ ] Bed linen\n- [ ] Kettle and breakfast supplies\n- [ ] Basic tools",
+        "due": 20,
+        "priority": "high",
+        "tags": [
+          "packing"
+        ]
+      },
+      {
+        "key": "internet",
+        "project": "settling",
+        "title": "Arrange the internet connection",
+        "body": "Ask the provider when service can start at the new address. Keep the existing connection until it is no longer needed.",
+        "due": 7
+      },
+      {
+        "key": "address",
+        "project": "settling",
+        "title": "Update delivery and billing addresses",
+        "body": "Make a list of regular deliveries and accounts, then update each address. Check whether mail forwarding is needed.",
+        "due": 18
+      },
+      {
+        "key": "meters",
+        "project": "settling",
+        "title": "Record the meter readings",
+        "body": "Photograph the readings when collecting the keys and keep the images with the move notes.",
+        "due": 21
+      },
+      {
+        "key": "clean",
+        "project": "settling",
+        "title": "Confirm the cleaning appointment",
+        "body": "The cleaner is checking availability before the furniture arrives. Follow up and record the confirmed time.",
+        "status": "waiting",
+        "due": 6
+      },
+      {
+        "key": "inventory",
+        "project": "home",
+        "title": "List the furniture to move",
+        "body": "The furniture list is complete. The bookcase needs dismantling; keep its fixings in a labelled bag.",
+        "status": "done"
+      },
+      {
+        "key": "storage",
+        "project": "home",
+        "title": "Record the decision to skip extra storage",
+        "body": "The spare furniture will fit in the new home. Cancel the storage enquiry and retain the decision here.",
+        "status": "cancelled"
+      },
+      {
+        "key": "review",
+        "project": "home",
+        "title": "Review the moving checklist each week",
+        "body": "- [ ] Check bookings and replies\n- [ ] Review packing progress\n- [ ] Adjust dates that no longer work",
+        "due": 7,
+        "weekly": true,
+        "tags": [
+          "review"
+        ]
+      }
+    ],
+    "views": [
+      {
+        "name": "Waiting for replies",
+        "expression": "status:waiting"
+      },
+      {
+        "name": "Packing checklist",
+        "expression": "tag:packing"
+      }
+    ],
+    "active": "home"
+  },
+  {
+    "id": "team",
+    "name": "Team project",
+    "description": "Coordinate an internal handbook update with draft sections, reviews and a clear handoff.",
+    "features": "12 tasks • Project groups • Subtasks • Due dates • Saved views",
+    "projects": [
+      {
+        "key": "handbook",
+        "name": "Team handbook",
+        "parent": ""
+      },
+      {
+        "key": "drafts",
+        "name": "Draft sections",
+        "parent": "handbook"
+      },
+      {
+        "key": "review",
+        "name": "Review and handoff",
+        "parent": "handbook"
+      }
+    ],
+    "tasks": [
+      {
+        "key": "scope",
+        "project": "handbook",
+        "title": "Agree what the handbook needs to cover",
+        "body": "# Team handbook update\n\nNew starters need one place to find the team’s contacts, meeting routines and first-week checklist. Alex is collecting draft sections; Priya is reviewing them for missing steps. These are fictional colleagues.\n\n## Try this in TodoBench\n\nExpand **Draft the first-week guide** to see separate subtasks. Use **Ready for review** under **Open tab…** to follow up on feedback.",
+        "status": "in_progress",
+        "priority": "high",
+        "due": 2
+      },
+      {
+        "key": "sources",
+        "project": "handbook",
+        "title": "Collect the existing onboarding notes",
+        "body": "Ask each team member for the notes they currently share with new starters. Record duplicate or conflicting instructions for review.",
+        "due": 3
+      },
+      {
+        "key": "guide",
+        "project": "drafts",
+        "title": "Draft the first-week guide",
+        "body": "Use a short sequence covering the first day, recurring meetings and where to ask for help. Link to the detailed references.",
+        "due": 7,
+        "tags": [
+          "writing"
+        ]
+      },
+      {
+        "key": "contacts",
+        "project": "drafts",
+        "title": "Check the team contact list",
+        "body": "Confirm each person’s role and the best contact route. Remove outdated names after checking with the team.",
+        "parent": "guide",
+        "due": 5,
+        "tags": [
+          "writing"
+        ]
+      },
+      {
+        "key": "meetings",
+        "project": "drafts",
+        "title": "Describe the regular meetings",
+        "body": "For each meeting, explain its purpose, who attends and what to prepare. Link to the shared calendar.",
+        "parent": "guide",
+        "due": 6,
+        "tags": [
+          "writing"
+        ]
+      },
+      {
+        "key": "feedback",
+        "project": "review",
+        "title": "Get Priya’s feedback on the draft",
+        "body": "Priya has the draft. Ask her to flag steps that assume knowledge a new starter would not have.",
+        "status": "waiting",
+        "due": 8,
+        "tags": [
+          "review"
+        ]
+      },
+      {
+        "key": "links",
+        "project": "review",
+        "title": "Check every handbook link",
+        "body": "Open the links using the access available to a new starter. Record missing permissions and broken destinations.",
+        "due": 9,
+        "priority": "high",
+        "tags": [
+          "review"
+        ]
+      },
+      {
+        "key": "publish",
+        "project": "review",
+        "title": "Publish the agreed handbook",
+        "body": "After the review is complete, publish the approved sections and add the handbook link to the welcome message.",
+        "due": 11
+      },
+      {
+        "key": "handoff",
+        "project": "review",
+        "title": "Tell the team where to suggest changes",
+        "body": "Add a short note explaining where to report corrections and who reviews them. Include the handbook owner’s contact route.",
+        "due": 12
+      },
+      {
+        "key": "outline",
+        "project": "handbook",
+        "title": "Record the approved outline",
+        "body": "The outline is agreed: contacts, first-week checklist, meeting routines and useful references.",
+        "status": "done"
+      },
+      {
+        "key": "video",
+        "project": "handbook",
+        "title": "Defer the introductory video",
+        "body": "The team agreed to finish the written guide first. Keep the video idea here for a later review.",
+        "status": "cancelled"
+      },
+      {
+        "key": "weekly",
+        "project": "handbook",
+        "title": "Review handbook feedback each week",
+        "body": "- [ ] Read new questions and corrections\n- [ ] Assign the next useful change\n- [ ] Check whether published guidance needs updating",
+        "due": 7,
+        "weekly": true,
+        "tags": [
+          "review"
+        ]
+      }
+    ],
+    "views": [
+      {
+        "name": "Ready for review",
+        "expression": "status:waiting"
+      },
+      {
+        "name": "Writing tasks",
+        "expression": "tag:writing"
+      }
+    ],
+    "active": "handbook"
+  },
+  {
+    "id": "moving",
+    "name": "WordPress client build",
+    "description": "Build fictional Ridgeway Auto’s site from intake and design notes through WordPress staging, manual construction and checks.",
+    "features": "15 tasks • Project groups • Subtasks • Waiting on people • Due dates",
+    "projects": [
+      {
+        "key": "move",
+        "name": "Ridgeway / WordPress",
+        "parent": ""
+      },
+      {
+        "key": "packing",
+        "name": "Assets and direction",
+        "parent": "move"
+      },
+      {
+        "key": "settling",
+        "name": "WordPress build and handoff",
+        "parent": "move"
+      }
+    ],
+    "tasks": [
+      {
+        "key": "plan",
+        "project": "move",
+        "title": "Define Ridgeway Auto’s website scope",
+        "body": "# Ridgeway Auto website\n\nMaya runs Ridgeway Auto and needs a clear services page, workshop photographs and an easy way for customers to call. She has asked [CYBER BRAND](https://cyberbrand.net/) to rebuild the site in WordPress. Gather the business material, settle the page direction and get the preview approved before launch. Maya and the workshop are fictional examples.\n\n| Page | Purpose |\n| --- | --- |\n| Home | Explain the workshop and how to enquire |\n| Services | Separate servicing, repairs and diagnosis |\n| About | Introduce the workshop with approved photographs |\n| Contact | Show confirmed hours and contact details |\n\n## Try this in TodoBench\n\nExpand **Review the supplied business material** for subtasks. Open **Ridgeway: client replies** under **Open tab…** to chase dependencies. Dates are editable planning dates relative to workspace creation.",
+        "status": "in_progress",
+        "priority": "high",
+        "due": 21,
+        "tags": [
+          "scope"
+        ]
+      },
+      {
+        "key": "movers",
+        "project": "move",
+        "title": "Request the complete business intake from Maya",
+        "body": "I am waiting for Maya’s service list, customer types, service area, hours, contact details, business history, common questions and preferred enquiry route. Ask for existing copy, logos, photographs, competitors, domain and hosting details, and anything else useful about the workshop.",
+        "status": "waiting",
+        "due": 3,
+        "tags": [
+          "client",
+          "intake"
+        ]
+      },
+      {
+        "key": "quote",
+        "project": "move",
+        "title": "Plan the page structure from the intake",
+        "body": "I will compare the service notes with callers’ questions before settling the navigation. Keep diagnosis separate from routine servicing so visitors can choose a useful next step. Record unresolved questions for Maya.",
+        "due": 12,
+        "priority": "high",
+        "tags": [
+          "direction"
+        ]
+      },
+      {
+        "key": "broadband",
+        "project": "settling",
+        "title": "Prepare the WordPress staging subdomain",
+        "body": "Create staging.ridgeway-auto.example as the planning placeholder for a staging subdomain on the client’s real domain. Install WordPress, Genesis, the Mai theme and Cybermaps. Keep staging out of search and record access in the build record without putting passwords in these notes.",
+        "due": 15,
+        "tags": [
+          "wordpress",
+          "staging"
+        ]
+      },
+      {
+        "key": "boxes",
+        "project": "packing",
+        "title": "Chase the original logo and workshop photographs",
+        "body": "Ask Maya for a transparent PNG instead of the supplied JPG, the editable logo source and original workshop photographs. I need captions and confirmation that the people pictured may appear on the site.",
+        "due": 2,
+        "tags": [
+          "assets"
+        ]
+      },
+      {
+        "key": "kitchen",
+        "project": "packing",
+        "title": "Review the supplied business material",
+        "body": "I will read the intake alongside the photographs and old site. Mark what is missing, what is reliable and what should lead the new pages before constructing them manually.",
+        "due": 5,
+        "tags": [
+          "assets",
+          "direction"
+        ]
+      },
+      {
+        "key": "mugs",
+        "project": "packing",
+        "title": "Recreate the lost Ridgeway logo",
+        "body": "Maya could not recover the source file. Recreate the mark from the clearest sign photograph, export a transparent PNG and send a proof for approval. I will keep the recreation separate from the reference image.",
+        "parent": "kitchen",
+        "due": 4,
+        "tags": [
+          "assets"
+        ]
+      },
+      {
+        "key": "pantry",
+        "project": "packing",
+        "title": "Choose photographs that explain the workshop",
+        "body": "I prefer a clear workshop entrance for Contact and actual servicing photographs for Services. Record a caption for each selected image and ask Maya about any unidentified work.",
+        "parent": "kitchen",
+        "due": 16,
+        "tags": [
+          "assets"
+        ]
+      },
+      {
+        "key": "night",
+        "project": "settling",
+        "title": "Build the approved pages manually in WordPress",
+        "body": "## construction checklist\n\n- [ ] Set Genesis and Mai theme layout choices\n- [ ] Build Home, Services, About and Contact manually\n- [ ] Add approved logo, photographs and captions\n- [ ] Configure Cybermaps with confirmed location details\n- [ ] Add phone links and the enquiry form\n\nI will build from the agreed page order, then adjust each layout against the real content.",
+        "due": 17,
+        "priority": "high",
+        "tags": [
+          "wordpress"
+        ]
+      },
+      {
+        "key": "address",
+        "project": "settling",
+        "title": "Check the staging pages manually",
+        "body": "Read every page on desktop and phone widths. Follow navigation and phone links, submit the form, check the reply destination and test keyboard access. I will record each issue and recheck the fix on staging.",
+        "due": 18,
+        "tags": [
+          "qa"
+        ]
+      },
+      {
+        "key": "meters",
+        "project": "settling",
+        "title": "Review the WordPress preview with Maya",
+        "body": "Walk Maya through services, hours, contact details, photographs and the enquiry route. Record approval and corrections in the handoff note before moving the site live.",
+        "due": 20,
+        "priority": "high",
+        "tags": [
+          "handoff",
+          "client"
+        ]
+      },
+      {
+        "key": "insurance",
+        "project": "settling",
+        "title": "Launch Ridgeway and register its search properties",
+        "body": "After approval, back up staging and the existing live site, move WordPress to the production domain and manually check HTTPS, links and forms again. Register Google Search Console and Bing Webmaster Tools, then submit the live sitemap to both. Record the property and sitemap URLs.",
+        "due": 21,
+        "tags": [
+          "launch",
+          "search"
+        ]
+      },
+      {
+        "key": "clean",
+        "project": "settling",
+        "title": "Confirm the recreated logo with Maya",
+        "body": "I am waiting for Maya to approve the recreated logo against the workshop sign. Keep the proof on staging and follow up before using it on the live site.",
+        "status": "waiting",
+        "due": 6,
+        "tags": [
+          "client",
+          "assets"
+        ]
+      },
+      {
+        "key": "inventory",
+        "project": "move",
+        "title": "Record the agreed WordPress build approach",
+        "body": "I recorded WordPress with Genesis, the Mai theme and Cybermaps in the scope notes. Maya wants to edit service text after handoff; I will demonstrate that on the completed pages.",
+        "status": "done",
+        "tags": [
+          "scope"
+        ]
+      },
+      {
+        "key": "review",
+        "project": "move",
+        "title": "Review Ridgeway’s outstanding work each week",
+        "body": "- [ ] Chase missing assets and approvals\n- [ ] Review staging corrections\n- [ ] Update planned dates\n\nI will only add GMB edits if included in scope, and analytics if Maya wants it. Monthly buildout begins with agreement on additional pages, content or improvements.",
+        "due": 7,
+        "weekly": true,
+        "tags": [
+          "review"
+        ]
+      }
+    ],
+    "views": [
+      {
+        "name": "Ridgeway: client replies",
+        "expression": "status:waiting"
+      },
+      {
+        "name": "Ridgeway: assets",
+        "expression": "tag:assets"
+      },
+      {
+        "name": "Ridgeway: priorities",
+        "expression": "priority:high status:todo,in_progress"
+      }
+    ],
+    "active": "move"
+  },
+  {
+    "id": "client",
+    "name": "Client website build",
+    "description": "Build fictional Northline Plastering’s site from client material and design conclusions using a scaffolding skillset and automated checks.",
+    "features": "20 tasks • Nested projects • Client follow-ups • Recurring reviews • A local brief",
+    "projects": [
+      {
+        "key": "client",
+        "name": "Northline website",
+        "parent": ""
+      },
+      {
+        "key": "intake",
+        "name": "Intake and assets",
+        "parent": "client"
+      },
+      {
+        "key": "build",
+        "name": "Website build",
+        "parent": "client"
+      },
+      {
+        "key": "launch",
+        "name": "Launch and search",
+        "parent": "client"
+      }
+    ],
+    "tasks": [
+      {
+        "key": "brief",
+        "project": "client",
+        "title": "Gather Northline Plastering’s website brief",
+        "body": "# Northline Plastering website\n\nOwen runs Northline Plastering and needs a site that explains repairs and room plastering, shows recent jobs and gives customers a clear enquiry route. He has asked [CYBER BRAND](https://cyberbrand.net/) to build it. Home, Services, Recent Work and Contact are the initial pages. Owen and the business are fictional examples.\n\nRequest the full service list, service area, customer types, business history, contact details, hours, common questions, existing copy, competitors, domain and hosting access, logos and original photographs. Ask for anything else that helps explain the business.\n\n## Build sequence\n\n- [ ] Gather and review the business material\n- [ ] Resolve missing assets and confirm the site direction\n- [ ] Use my scaffolding skillset for the Cyber Edge foundation\n- [ ] Implement the approved content and run automated checks\n- [ ] Collect approval, launch and register search properties\n\n## Try this in TodoBench\n\nUse **Open tab… → Northline: client replies** for dependencies. Expand the build task for its checks. Open the attached brief to see a local file that travels with the task. Dates are planning examples, not a promised build window.",
+        "status": "in_progress",
+        "priority": "high",
+        "due": 2,
+        "tags": [
+          "scope",
+          "intake"
+        ],
+        "attachment": "Northline Plastering — Cyber Edge brief\n\nFictional client: Owen, Northline Plastering.\nPages: Home, Services, Recent Work, Contact.\nGather business details and original assets; review the material and agree the direction. Lead with repairs, then paired job photographs and an enquiry route.\nUse the scaffolding skillset, implement approved content and run automated checks plus manual review.\nAfter approval and launch: Google Search Console, Bing Webmaster Tools and sitemap submission to both. GMB edits only within scope. Analytics only if wanted; Owen declined for this release. Agree additional pages, content or improvements before monthly buildout.\n"
+      },
+      {
+        "key": "logo",
+        "project": "intake",
+        "title": "Request a transparent PNG logo from Owen",
+        "body": "Owen supplied a JPG of the Northline logo. I need a transparent PNG and the original artwork if available. If the source is lost, ask for the best sign or print reference, recreate the mark and get Owen’s approval.",
+        "status": "waiting",
+        "due": 3,
+        "priority": "high",
+        "tags": [
+          "client",
+          "assets"
+        ]
+      },
+      {
+        "key": "photos",
+        "project": "intake",
+        "title": "Chase original before-and-after photographs",
+        "body": "I am waiting for Owen’s original job photographs and captions describing the repair or finish. Ask which images may be published and keep paired shots together; the message thumbnails hide the surface detail.",
+        "status": "waiting",
+        "due": 4,
+        "tags": [
+          "client",
+          "assets"
+        ]
+      },
+      {
+        "key": "nap",
+        "project": "intake",
+        "title": "Confirm Northline’s services and contact details",
+        "body": "I am waiting for Owen to confirm service areas, services, business name, phone, email and hours. Ask whether customers should call or send job photographs with an enquiry. Record the same approved facts for the site and search records.",
+        "status": "waiting",
+        "due": 5,
+        "tags": [
+          "client",
+          "intake"
+        ]
+      },
+      {
+        "key": "chase",
+        "project": "intake",
+        "title": "Follow up on missing Northline assets each week",
+        "body": "Send Owen a short list of what is still missing and record what arrives. I will revisit the page direction if the new material changes which services or jobs can be explained clearly.",
+        "due": 7,
+        "weekly": true,
+        "tags": [
+          "review",
+          "client"
+        ]
+      },
+      {
+        "key": "questionnaire",
+        "project": "intake",
+        "title": "Record the intake request sent to Owen",
+        "body": "I sent the full business questionnaire, including services, customers, history, competitors, existing materials, access and approval responsibilities. Owen’s first reply included incomplete photographs and a JPG logo; the follow-up tasks record what is missing.",
+        "status": "done",
+        "tags": [
+          "scope"
+        ]
+      },
+      {
+        "key": "build",
+        "project": "build",
+        "title": "Scaffold and implement Northline’s website",
+        "body": "I will use my scaffolding skillset after resolving the content direction: repairs and room plastering first, paired job photographs next, then a clear enquiry route. Set up the Cyber Edge page structure, shared navigation and reusable content sections, then implement the approved material.",
+        "priority": "high",
+        "due": 10,
+        "tags": [
+          "build",
+          "direction"
+        ]
+      },
+      {
+        "key": "pages",
+        "project": "build",
+        "title": "Build Home, Services, Recent Work and Contact",
+        "body": "I will turn Owen’s approved job captions into short case notes beside paired photographs. Use actual service descriptions and contact details throughout. Build responsive layouts and check that the enquiry route remains visible on small screens.",
+        "parent": "build",
+        "due": 9,
+        "tags": [
+          "build"
+        ]
+      },
+      {
+        "key": "wcag",
+        "project": "build",
+        "title": "Run automated checks on the website build",
+        "body": "## build checks\n\n- [ ] Run the project’s build and lint checks\n- [ ] Run automated navigation and form tests\n- [ ] Check links and image references\n- [ ] Run automated accessibility checks and inspect reported issues\n- [ ] Check responsive layouts and keyboard use manually\n\nI will record commands, results and unresolved issues in the build note before handoff.",
+        "parent": "build",
+        "due": 10,
+        "priority": "high",
+        "tags": [
+          "qa"
+        ]
+      },
+      {
+        "key": "agentic",
+        "project": "build",
+        "title": "Prepare the sitemap and page metadata",
+        "body": "Set titles and descriptions from the approved services and area. Generate the production sitemap and review robots settings. I will remove preview-only search restrictions at launch and check that the sitemap contains only intended live pages.",
+        "due": 10,
+        "tags": [
+          "qa",
+          "search"
+        ]
+      },
+      {
+        "key": "handoff",
+        "project": "launch",
+        "title": "Review the preview and handoff notes with Owen",
+        "body": "Ask Owen to check services, contact details, captions and photograph choices on the preview. I will record approval and corrections in the handoff record, including how to request later content changes.",
+        "due": 11,
+        "tags": [
+          "handoff",
+          "client"
+        ]
+      },
+      {
+        "key": "dns",
+        "project": "launch",
+        "title": "Record the prepared hosting and rollback route",
+        "body": "I recorded the staging host, planned production destination and a copy of the existing site for rollback. DNS is still on the existing site; the switch follows Owen’s approval.",
+        "status": "done",
+        "tags": [
+          "launch"
+        ]
+      },
+      {
+        "key": "golive",
+        "project": "launch",
+        "title": "Launch the approved Northline site",
+        "body": "After Owen approves, deploy the checked build and switch the domain as planned. Confirm HTTPS, all four pages, phone links and the contact form on the live site. I will record the deployed revision and any follow-up work.",
+        "due": 12,
+        "priority": "high",
+        "tags": [
+          "launch"
+        ]
+      },
+      {
+        "key": "gsc",
+        "project": "launch",
+        "title": "Register Northline in Google Search Console",
+        "body": "After launch, verify the production property using the agreed account access. I will record the property URL and ownership method in the handoff record before submitting the sitemap.",
+        "due": 13,
+        "tags": [
+          "search"
+        ]
+      },
+      {
+        "key": "bing",
+        "project": "launch",
+        "title": "Register Northline in Bing Webmaster Tools",
+        "body": "After launch, add and verify the production site in Bing Webmaster Tools. I will record the property URL and confirm access with Owen before submitting the sitemap.",
+        "due": 13,
+        "tags": [
+          "search"
+        ]
+      },
+      {
+        "key": "sitemap",
+        "project": "launch",
+        "title": "Submit Northline’s sitemap to Google and Bing",
+        "body": "Check that the live sitemap responds successfully and contains the approved production URLs. Submit it in Google Search Console and Bing Webmaster Tools, then record submission status and follow up on reported problems.",
+        "due": 14,
+        "priority": "high",
+        "tags": [
+          "search"
+        ]
+      },
+      {
+        "key": "pagespeed",
+        "project": "launch",
+        "title": "Review live checks and agree the next buildout",
+        "body": "Run the automated smoke checks against production and inspect any failures. I will propose additional service pages, job stories or improvements for a monthly buildout only after agreeing the work with Owen.",
+        "due": 14,
+        "priority": "high",
+        "tags": [
+          "qa",
+          "review"
+        ]
+      },
+      {
+        "key": "gmb",
+        "project": "launch",
+        "title": "Update Northline’s GMB details if included in scope",
+        "body": "Check the agreed scope before editing Google Business Profile (GMB). If included, use Owen’s confirmed services, contact details and website URL, and record exactly what changed. I will ask for approval on any uncertain detail.",
+        "due": 15,
+        "tags": [
+          "search"
+        ]
+      },
+      {
+        "key": "verify",
+        "project": "launch",
+        "title": "Confirm Owen’s approval for scoped GMB changes",
+        "body": "I am waiting for Owen to confirm the proposed profile details for the scoped GMB work. Keep changes pending until the details and access are settled; record any verification action that needs the client.",
+        "status": "waiting",
+        "due": 16,
+        "tags": [
+          "client",
+          "search"
+        ]
+      },
+      {
+        "key": "pixel",
+        "project": "build",
+        "title": "Record Owen’s decision to omit analytics",
+        "body": "Owen does not want analytics for the first release. I cancelled the setup task and recorded that decision in the handoff notes. Revisit installation only if he asks for it.",
+        "status": "cancelled",
+        "tags": [
+          "scope"
+        ]
+      }
+    ],
+    "views": [
+      {
+        "name": "Northline: client replies",
+        "expression": "tag:client status:waiting"
+      },
+      {
+        "name": "Northline: build checks",
+        "expression": "tag:qa"
+      },
+      {
+        "name": "Northline: search follow-up",
+        "expression": "tag:search"
+      }
+    ],
+    "active": "client"
+  },
+  {
+    "id": "launch",
+    "name": "Website care and local search",
+    "description": "Fix business profile details, prepare weekly GMB posts, check search reports and follow up on agreed website content.",
+    "features": "19 tasks • Weekly GMB posting • Client approvals • Search checks • Subtasks • A local brief",
+    "projects": [
+      {
+        "key": "release",
+        "name": "Search and follow-up",
+        "parent": ""
+      },
+      {
+        "key": "quality",
+        "name": "Search checks",
+        "parent": "release"
+      },
+      {
+        "key": "comms",
+        "name": "Client content",
+        "parent": "release"
+      }
+    ],
+    "tasks": [
+      {
+        "key": "launch",
+        "project": "release",
+        "title": "Plan the recurring client work",
+        "body": "# Weekly website and profile care\n\nMaya at Ridgeway Auto needs a weekly Google Business Profile (GMB) post and help correcting the opening hours. Owen at Northline Plastering needs regular job updates and follow-up on his new site’s search reports. They have asked [CYBER BRAND](https://cyberbrand.net/) to handle the agreed work. Both clients are fictional.\n\n- [ ] Collect the week’s photograph and topic\n- [ ] Get the client’s approval before posting\n- [ ] Fix confirmed profile errors\n- [ ] Review sitemap reports and website issues\n\nAnalytics is optional. Agree any additional pages or monthly content with the client before starting it.\n\n## Try this in TodoBench\n\nExpand **Check the live sitemap submissions** for separate checks. Use **Open tab…** for search blockers or client decisions. Complete the recurring posting task to advance its date; the completed notes remain in **History**.",
+        "status": "in_progress",
+        "priority": "high",
+        "due": 14,
+        "tags": [
+          "search"
+        ],
+        "attachment": "Weekly website and profile care\n\nFictional clients: Maya at Ridgeway Auto and Owen at Northline Plastering.\nRidgeway: correct confirmed GMB hours and publish one approved post each week. Request original photographs and get approval before publishing.\nNorthline: collect job updates and review search reports.\nRegister live sites in Google Search Console and Bing Webmaster Tools, submit sitemaps and follow up on errors. Analytics is optional. Agree additional pages and monthly content before starting.\n"
+      },
+      {
+        "key": "candidate",
+        "project": "release",
+        "title": "Fix Ridgeway’s GMB opening hours",
+        "body": "Maya confirmed that the Saturday hours on Google Business Profile are wrong. Correct them as part of the agreed profile work, check the displayed result and note the change here. Do not change details that have not been confirmed.",
+        "due": 2,
+        "priority": "high",
+        "tags": [
+          "gmb",
+          "search"
+        ]
+      },
+      {
+        "key": "notes",
+        "project": "comms",
+        "title": "Draft this week’s GMB post",
+        "body": "Use Maya’s approved workshop photograph and a short description of a service customers ask about. Keep the wording factual, link to the relevant page and send the draft for approval.",
+        "due": 3,
+        "tags": [
+          "content",
+          "gmb"
+        ]
+      },
+      {
+        "key": "signoff",
+        "project": "release",
+        "title": "Get Maya’s approval for the weekly post",
+        "body": "The draft and photograph are with Maya. Wait for her approval before publishing to GMB; record any requested corrections here.",
+        "status": "waiting",
+        "priority": "high",
+        "due": 5,
+        "tags": [
+          "client",
+          "gmb"
+        ]
+      },
+      {
+        "key": "triage",
+        "project": "release",
+        "title": "Publish the approved GMB post each week",
+        "body": "- [ ] Check that Maya approved the text and photograph\n- [ ] Publish the post to Ridgeway’s Google Business Profile\n- [ ] Check the live text, image and website link\n- [ ] Record the post URL and request next week’s material\n\nIf approval has not arrived, keep the post pending and follow up with Maya.",
+        "due": 7,
+        "weekly": true,
+        "tags": [
+          "review",
+          "gmb"
+        ]
+      },
+      {
+        "key": "export",
+        "project": "quality",
+        "title": "Remove Ridgeway’s leftover search restriction",
+        "body": "I found a staging search restriction on Ridgeway’s live site during the post-launch review. Remove it on production, check the rendered page and response headers, and verify that staging remains excluded. Record the correction before resubmitting URLs.",
+        "status": "in_progress",
+        "priority": "urgent",
+        "due": 2,
+        "tags": [
+          "search",
+          "blocker"
+        ]
+      },
+      {
+        "key": "offline",
+        "project": "quality",
+        "title": "Check Northline’s production sitemap response",
+        "body": "Fetch the live sitemap and inspect its URLs. I need production pages with successful responses, without preview URLs or broken routes, before submitting it to the search properties.",
+        "priority": "high",
+        "due": 4,
+        "tags": [
+          "qa",
+          "blocker"
+        ]
+      },
+      {
+        "key": "checks",
+        "project": "quality",
+        "title": "Check the live sitemap submissions",
+        "body": "I will record each property, sitemap URL, submission date and reported status in the search record. Treat registration, submission and later indexing reports as separate steps.",
+        "due": 8,
+        "tags": [
+          "qa",
+          "search"
+        ]
+      },
+      {
+        "key": "fresh",
+        "project": "quality",
+        "title": "Register both sites in Google Search Console",
+        "body": "Verify Ridgeway Auto and Northline Plastering in their agreed Google Search Console accounts. I will record the property URLs and access arrangements, then submit each live sitemap.",
+        "parent": "checks",
+        "due": 7,
+        "tags": [
+          "qa",
+          "search"
+        ]
+      },
+      {
+        "key": "upgrade",
+        "project": "quality",
+        "title": "Register both sites in Bing Webmaster Tools",
+        "body": "Verify both production sites in Bing Webmaster Tools and submit their live sitemaps. I will record the property URLs and reported submission status for Maya and Owen.",
+        "parent": "checks",
+        "due": 7,
+        "tags": [
+          "qa",
+          "search"
+        ]
+      },
+      {
+        "key": "restore",
+        "project": "quality",
+        "title": "Review Google and Bing sitemap reports",
+        "body": "Open the reports for each submitted sitemap and inspect any fetch or URL errors. I will record what the tools report and create specific fixes; submission alone does not tell me which pages have been indexed.",
+        "parent": "checks",
+        "due": 8,
+        "tags": [
+          "qa",
+          "search"
+        ]
+      },
+      {
+        "key": "labels",
+        "project": "quality",
+        "title": "Check contact details across the live pages",
+        "body": "Compare each client’s approved name, phone, hours and service area with their site and handoff record. I will flag inconsistencies before copying details into a scoped GMB edit.",
+        "due": 6,
+        "tags": [
+          "qa"
+        ]
+      },
+      {
+        "key": "privacy",
+        "project": "release",
+        "title": "Ask Maya whether she wants analytics",
+        "body": "I am waiting for Maya to decide whether she wants analytics and which questions she wants it to answer. Record the choice before proposing a setup or adding any tracking code.",
+        "status": "waiting",
+        "due": 5,
+        "tags": [
+          "client",
+          "analytics"
+        ]
+      },
+      {
+        "key": "rollback",
+        "project": "release",
+        "title": "Record search access in the client handoffs",
+        "body": "Add Google Search Console and Bing property links, sitemap locations and account responsibilities to each handoff. I will keep credentials out of task notes and confirm the client can access the properties.",
+        "due": 10,
+        "tags": [
+          "handoff"
+        ]
+      },
+      {
+        "key": "email",
+        "project": "comms",
+        "title": "Request a photograph for next week’s post",
+        "body": "Ask Maya for an original workshop photograph and a sentence about the work shown. Ask Owen for a before-and-after pair for his next job update. Confirm which images may be published.",
+        "due": 11,
+        "tags": [
+          "content",
+          "client"
+        ]
+      },
+      {
+        "key": "faq",
+        "project": "comms",
+        "title": "Agree the next month’s website updates",
+        "body": "Suggest a separate servicing page for Ridgeway and a recent-job story for Northline. Confirm the pages, content or improvements each client wants, then request the material and schedule only the agreed work.",
+        "due": 9,
+        "tags": [
+          "content",
+          "scope"
+        ]
+      },
+      {
+        "key": "monitor",
+        "project": "comms",
+        "title": "Follow up on the first search reports",
+        "body": "Review the available Google and Bing reports after submission. I will log fetch errors and unexpected exclusions, explain the findings to the relevant client and add concrete correction tasks where needed.",
+        "due": 15,
+        "tags": [
+          "search",
+          "review"
+        ]
+      },
+      {
+        "key": "icons",
+        "project": "release",
+        "title": "Record the confirmed post-launch contact details",
+        "body": "I checked both clients’ approved contact details against their live contact pages and recorded the source of each confirmation in the handoff. Use those records for later edits.",
+        "status": "done",
+        "tags": [
+          "handoff"
+        ]
+      },
+      {
+        "key": "sync",
+        "project": "release",
+        "title": "Record Northline’s decision to skip analytics",
+        "body": "Owen declined analytics for this release. I cancelled the installation task and recorded the decision. Any future setup starts with him asking for it and agreeing what to measure.",
+        "status": "cancelled",
+        "tags": [
+          "analytics",
+          "scope"
+        ]
+      }
+    ],
+    "views": [
+      {
+        "name": "Search blockers",
+        "expression": "tag:blocker status:todo,in_progress"
+      },
+      {
+        "name": "Client decisions",
+        "expression": "status:waiting"
+      },
+      {
+        "name": "Search checks",
+        "expression": "tag:qa"
+      },
+      {
+        "name": "Content follow-ups",
+        "expression": "tag:content"
+      },
+      {
+        "name": "Weekly GMB work",
+        "expression": "tag:gmb"
+      }
+    ],
+    "active": "release"
+  },
+  {
+    "id": "tutorial",
+    "name": "Guided feature tour",
+    "description": "Try notes, filters, subtasks, recurrence and attachments with small, editable practice tasks.",
+    "features": "13 tasks • Guided exercises • All core features",
+    "projects": [],
+    "tasks": [],
+    "views": [],
+    "active": "inbox"
+  }
+]

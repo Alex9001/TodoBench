@@ -1,0 +1,7 @@
+* text=auto eol=lf
+*.png -text
+*.ico -text
+*.icns -text
+*.bin -text
+# Interoperability fixtures deliberately retain BOM, CRLF and trailing spaces.
+docs/fixtures/** -text whitespace=-trailing-space,cr-at-eol

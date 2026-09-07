@@ -1,0 +1,63 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_call:
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  workflow-lint:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - run: |
+          curl --fail --location --retry 3 --output actionlint.tgz https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz
+          echo "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8  actionlint.tgz" | sha256sum --check --strict
+          tar -xzf actionlint.tgz actionlint
+          ./actionlint
+  native:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2025, macos-15-intel, macos-14]
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: ./.github/actions/setup-native
+      - if: runner.os != 'Windows'
+        run: cmake --preset dev
+      - if: runner.os == 'Windows'
+        run: cmake --preset dev "-DCMAKE_TOOLCHAIN_FILE=$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"
+      - run: cmake --build --preset dev --parallel 3
+      - run: ctest --preset dev --output-on-failure --timeout 90
+        env:
+          QT_QPA_PLATFORM: offscreen
+      - if: runner.os == 'Linux'
+        run: python scripts/check-quality.py --build-dir build/dev
+  sanitizers:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: ./.github/actions/setup-native
+      - run: cmake --preset asan
+      - run: cmake --build --preset asan --parallel 3
+      - run: ctest --preset asan --output-on-failure --timeout 90
+        env:
+          QT_QPA_PLATFORM: offscreen
+  required-gate:
+    if: always()
+    needs: [workflow-lint, native, sanitizers]
+    runs-on: ubuntu-24.04
+    steps:
+      - env:
+          LINT_RESULT: ${{ needs.workflow-lint.result }}
+          NATIVE_RESULT: ${{ needs.native.result }}
+          SANITIZER_RESULT: ${{ needs.sanitizers.result }}
+        run: |
+          test "$LINT_RESULT" = success
+          test "$NATIVE_RESULT" = success
+          test "$SANITIZER_RESULT" = success

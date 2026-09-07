@@ -1,0 +1,38 @@
+name: Native dependencies
+description: Install the pinned Qt SDK and native build/test tools
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
+      with:
+        python-version: '3.12'
+    - shell: bash
+      run: python -m pip install -r requirements-dev.txt
+    - uses: jurplel/install-qt-action@48d3ad6db93f3627c8ee7a0454bc6f3744f7e730 # v4.3.1
+      with:
+        version: '6.8.3'
+        cache: true
+    - uses: ilammy/msvc-dev-cmd@a102174a2b586eec2ea151a69e6fd14404a8ce7c # v1.13.0
+    - if: runner.os == 'Linux'
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y ninja-build libyaml-cpp-dev libarchive-dev p7zip-full clang-tidy \
+          libgl1-mesa-dev libxkbcommon-x11-0 libxcb-cursor0 pkg-config libfuse2
+    - if: runner.os == 'macOS'
+      shell: bash
+      run: |
+        brew install ninja yaml-cpp libarchive sevenzip
+        echo "CMAKE_PREFIX_PATH=$(brew --prefix libarchive);$(brew --prefix yaml-cpp);$CMAKE_PREFIX_PATH" >> "$GITHUB_ENV"
+    - if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        choco install ninja 7zip nsis -y --no-progress
+        Add-Content $env:GITHUB_PATH 'C:\Program Files\7-Zip'
+        Add-Content $env:GITHUB_PATH 'C:\Program Files (x86)\NSIS'
+        $NativeVcpkg = Join-Path $env:RUNNER_TEMP 'todobench-vcpkg'
+        git clone https://github.com/microsoft/vcpkg.git $NativeVcpkg
+        git -C $NativeVcpkg checkout 04a9d8e5212d01ee1dd9478eadd9caade4f8b0d4
+        & "$NativeVcpkg\bootstrap-vcpkg.bat" -disableMetrics
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+        Add-Content $env:GITHUB_ENV "VCPKG_ROOT=$NativeVcpkg"

@@ -1,0 +1,5 @@
+Checks: '-*,readability-function-cognitive-complexity'
+WarningsAsErrors: 'readability-function-cognitive-complexity'
+HeaderFilterRegex: 'native/(src|tests)/.*'
+CheckOptions:
+  readability-function-cognitive-complexity.Threshold: 25

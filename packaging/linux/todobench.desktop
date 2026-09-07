@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=TodoBench
+Comment=Native Markdown workspace task manager
+Exec=TodoBench %F
+Icon=todobench
+Terminal=false
+Categories=Office;ProjectManagement;
+StartupWMClass=TodoBench

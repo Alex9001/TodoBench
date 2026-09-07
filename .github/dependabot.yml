@@ -1,0 +1,38 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      actions-security-updates:
+        applies-to: security-updates
+        patterns: ["*"]
+      actions-patch-updates:
+        applies-to: version-updates
+        patterns: ["*"]
+        update-types: ["patch"]
+      actions-manual-updates:
+        applies-to: version-updates
+        patterns: ["*"]
+        update-types: ["minor", "major"]
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      pip-security-updates:
+        applies-to: security-updates
+        patterns: ["*"]
+      pip-patch-updates:
+        applies-to: version-updates
+        patterns: ["*"]
+        update-types: ["patch"]
+      pip-manual-updates:
+        applies-to: version-updates
+        patterns: ["*"]
+        update-types: ["minor", "major"]
+  - package-ecosystem: vcpkg
+    directory: /
+    schedule:
+      interval: monthly

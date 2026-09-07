@@ -1,0 +1,111 @@
+name: Release
+on:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish after all verification gates pass
+        type: boolean
+        default: false
+permissions:
+  contents: write
+concurrency:
+  group: release
+  cancel-in-progress: false
+jobs:
+  checks:
+    uses: ./.github/workflows/ci.yml
+    permissions:
+      contents: read
+  stage:
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - id: version
+        run: echo "version=$(python3 scripts/version.py)" >> "$GITHUB_OUTPUT"
+      - name: Create draft at this commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: python3 scripts/stage-release.py "$VERSION" "$GITHUB_SHA"
+  package:
+    needs: stage
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            platform: linux-x86_64
+          - os: windows-2025
+            platform: windows-x64
+          - os: macos-15-intel
+            platform: macos-x86_64
+          - os: macos-14
+            platform: macos-arm64
+    env:
+      VERSION: ${{ needs.stage.outputs.version }}
+      QT_QPA_PLATFORM: offscreen
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: ./.github/actions/setup-native
+      - if: runner.os != 'Windows'
+        run: cmake --preset release -DTODOBENCH_BUILD_TESTS=ON
+      - if: runner.os == 'Windows'
+        run: cmake --preset release -DTODOBENCH_BUILD_TESTS=ON "-DCMAKE_TOOLCHAIN_FILE=$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"
+      - run: cmake --build --preset release --parallel 3
+      - name: Test release build
+        run: ctest --test-dir build/release --output-on-failure --timeout 90
+      - name: Render themes at both display scales
+        shell: bash
+        run: |
+          for scale in 1 2; do
+            QT_SCALE_FACTOR="$scale" TODOBENCH_THEME_SCREENSHOTS="$PWD/build/screenshots/$scale" build/release/test_main_window themesRender
+          done
+      - if: runner.os == 'Linux'
+        name: Linux packages
+        run: |
+          scripts/install-linuxdeploy.sh
+          export PATH="$PWD/build/tools:$PATH"
+          export APPIMAGE_EXTRACT_AND_RUN=1
+          scripts/package-linux-appimage.sh "$VERSION" build/release dist
+          scripts/package-linux-portable.sh "$VERSION" build/release dist
+      - if: runner.os == 'macOS'
+        name: macOS packages
+        run: scripts/package-macos.sh "$VERSION" build/release dist
+      - if: runner.os == 'Windows'
+        name: Windows packages
+        run: scripts/package-windows.ps1 -Version $env:VERSION
+      - name: Verify native packages
+        run: python scripts/verify-packages.py dist
+      - name: Collect dependency source and build provenance
+        env:
+          RELEASE_PLATFORM: ${{ matrix.platform }}
+        run: python scripts/dependency-sources.py dist
+      - name: Upload packages to draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_PLATFORM: ${{ matrix.platform }}
+        run: python scripts/upload-release.py dist
+      - uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08
+        with:
+          name: screenshots-${{ matrix.platform }}
+          path: build/screenshots/
+          if-no-files-found: error
+  verify-and-publish:
+    needs: [stage, checks, package]
+    runs-on: ubuntu-24.04
+    env:
+      GH_TOKEN: ${{ github.token }}
+      VERSION: ${{ needs.stage.outputs.version }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Download and verify all staged artifacts
+        run: |
+          gh release download "v$VERSION" --dir release-assets
+          python3 scripts/verify-release.py release-assets "$VERSION" "$GITHUB_SHA"
+          gh release upload "v$VERSION" release-assets/SHA256SUMS --clobber
+      - name: Publish verified draft
+        if: inputs.publish
+        run: gh release edit "v$VERSION" --draft=false --latest
