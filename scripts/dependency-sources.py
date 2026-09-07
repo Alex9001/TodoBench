@@ -10,6 +10,7 @@ import subprocess
 import sys
 import tarfile
 from urllib.request import urlopen
+from urllib.parse import urlencode
 
 
 def output(*args):
@@ -47,6 +48,26 @@ def qt_icu_source(stage):
     return records
 
 
+def archived_ubuntu_source(stage, source):
+    name, version = source.split('=', 1)
+    query = urlencode({'ws.op': 'getPublishedSources', 'source_name': name,
+                       'version': version, 'exact_match': 'true'})
+    publications = json.load(urlopen('https://api.launchpad.net/1.0/ubuntu/+archive/primary?' + query, timeout=120))
+    assert publications['entries'], 'Exact Ubuntu source unavailable: ' + source
+    publication = publications['entries'][0]['self_link']
+    urls = json.load(urlopen(publication + '?ws.op=sourceFileUrls', timeout=120))
+    records = [download(url, stage / url.rsplit('/', 1)[1]) for url in urls]
+    descriptor = next(stage / record['file'] for record in records if record['file'].endswith('.dsc'))
+    checksums = descriptor.read_text().split('Checksums-Sha256:\n', 1)[1]
+    for line in checksums.splitlines():
+        if not line.startswith(' '):
+            break
+        expected, size, filename = line.split()
+        content = (stage / filename).read_bytes()
+        assert len(content) == int(size) and hashlib.sha256(content).hexdigest() == expected, filename
+    (stage / (name + '-launchpad.json')).write_text(json.dumps({'publication': publication, 'downloads': records}, indent=2) + '\n')
+
+
 def linux_sources(stage):
     # Ubuntu's deb822 sources must offer the exact installed source versions.
     subprocess.run(['sudo', 'sed', '-i', 's/^Types: deb$/Types: deb deb-src/', '/etc/apt/sources.list.d/ubuntu.sources'], check=True)
@@ -61,7 +82,9 @@ def linux_sources(stage):
         sources.add(output('dpkg-query', '-W', '-f=${source:Package}=${source:Version}', package))
     (stage / 'ubuntu-sources.txt').write_text('\n'.join(sorted(sources)) + '\n')
     for source in sorted(sources):
-        subprocess.run(['apt-get', 'source', '--download-only', source], cwd=stage, check=True)
+        result = subprocess.run(['apt-get', 'source', '--download-only', source], cwd=stage)
+        if result.returncode:
+            archived_ubuntu_source(stage, source)
 
 
 def windows_sources(stage):
