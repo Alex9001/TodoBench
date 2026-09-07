@@ -25,6 +25,14 @@ std::string portable_name(const std::filesystem::path& path) {
     return {utf8.begin(), utf8.end()};
 }
 
+void set_entry_name(struct archive_entry* entry, const std::filesystem::path& path) {
+#ifdef _WIN32
+    archive_entry_copy_pathname_w(entry, path.generic_wstring().c_str());
+#else
+    archive_entry_set_pathname_utf8(entry, portable_name(path).c_str());
+#endif
+}
+
 int open_input_archive(struct archive* input, const std::filesystem::path& path) {
 #ifdef _WIN32
     return archive_read_open_filename_w(input, path.c_str(), 64 * 1024);
@@ -122,7 +130,7 @@ bool write_directory_header(struct archive* output, const std::filesystem::path&
                             const ArchiveLimits& limits, std::string& error) {
     if (!reserve_archive_entry(entries, limits, error)) return false;
     archive_entry* entry = archive_entry_new();
-    archive_entry_set_pathname_utf8(entry, portable_name(relative).c_str());
+    set_entry_name(entry, relative);
     archive_entry_set_filetype(entry, AE_IFDIR);
     archive_entry_set_perm(entry, 0755);
     const auto result = archive_write_header(output, entry);
@@ -146,7 +154,7 @@ bool write_regular_file(struct archive* output, const std::filesystem::path& sou
     input.close();
     if (!reserve_archive_entry(entries, limits, error)) return false;
     archive_entry* entry = archive_entry_new();
-    archive_entry_set_pathname_utf8(entry, portable_name(relative).c_str());
+    set_entry_name(entry, relative);
     archive_entry_set_filetype(entry, AE_IFREG);
     archive_entry_set_perm(entry, 0644);
     archive_entry_set_size(entry, size);
