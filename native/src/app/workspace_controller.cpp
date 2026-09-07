@@ -379,6 +379,7 @@ bool WorkspaceController::resolve_task_conflict(const TaskRecord& local, Conflic
     if (resolution == ConflictResolution::UseDisk) {
         std::ifstream input(result.conflict_path, std::ios::binary);
         const std::string bytes((std::istreambuf_iterator<char>(input)), std::istreambuf_iterator<char>());
+        input.close();
         const auto parsed = parse_task_markdown(local.source_path, bytes);
         if (std::holds_alternative<CodecError>(parsed)) { error = std::get<CodecError>(parsed).message; return false; }
         auto task = std::get<TaskRecord>(parsed);
@@ -391,6 +392,7 @@ bool WorkspaceController::resolve_task_conflict(const TaskRecord& local, Conflic
     }
     std::ifstream conflict_input(result.conflict_path, std::ios::binary);
     const std::string conflict_bytes((std::istreambuf_iterator<char>(conflict_input)), std::istreambuf_iterator<char>());
+    conflict_input.close();
     const auto conflict_hash = WorkspaceStore::hash_bytes(conflict_bytes);
     if (resolution == ConflictResolution::UseMerged) {
         auto merged = local;
@@ -424,6 +426,7 @@ bool WorkspaceController::import_duplicate_as_separate(const std::string& source
         return false;
     }
     const std::string bytes((std::istreambuf_iterator<char>(input)), std::istreambuf_iterator<char>());
+    input.close();
     const auto parsed = parse_task_markdown(source_path, bytes);
     if (std::holds_alternative<CodecError>(parsed)) {
         error = std::get<CodecError>(parsed).message;

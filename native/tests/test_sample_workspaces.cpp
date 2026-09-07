@@ -91,7 +91,8 @@ void SampleWorkspacesTest::createsEachWorkflow() {
     QTemporaryDir temporary;
     const auto root = std::filesystem::path(temporary.path().toStdString()) / "chosen";
     WorkspaceRecipe recipe{"Practice", workflow.toStdString(), "light", "total_commander"};
-    QCOMPARE(create_sample_workspace(root, recipe).status, SaveStatus::Saved);
+    const auto created = create_sample_workspace(root, recipe);
+    QVERIFY2(created.status == SaveStatus::Saved, created.message.c_str());
     const auto snapshot = WorkspaceScanner{}.scan(root);
     QCOMPARE(snapshot.tasks.size(), static_cast<size_t>(count));
     QVERIFY(snapshot.diagnostics.empty());

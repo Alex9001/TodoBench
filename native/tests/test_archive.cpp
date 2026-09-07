@@ -370,7 +370,8 @@ void ArchiveTest::importsArchiveCreatedBySevenZip() {
     const auto archive = std::filesystem::path(temporary.path().toStdString()) / "from-7zip.7z";
     const auto restored = std::filesystem::path(temporary.path().toStdString()) / "imported-from-7zip";
     QVERIFY(archive_with_seven_zip(seeded.root, archive));
-    QVERIFY(WorkspaceArchive::import_workspace(archive, restored).success);
+    const auto imported = WorkspaceArchive::import_workspace(archive, restored);
+    QVERIFY2(imported.success, imported.error.c_str());
     QVERIFY(restored_workspace_matches(seeded, restored));
 }
 

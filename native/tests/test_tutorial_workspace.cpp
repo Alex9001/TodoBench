@@ -112,7 +112,7 @@ void TutorialWorkspaceTest::optInPersistsTutorial() {
     const auto root = std::filesystem::path(temporary.path().toStdString()) / "tutorial";
     std::filesystem::create_directory(root); // Empty pre-existing destinations are supported too.
     const auto result = WorkspaceStore::create_workspace(root, "Practice", true);
-    QCOMPARE(result.status, SaveStatus::Saved);
+    QVERIFY2(result.status == SaveStatus::Saved, result.message.c_str());
     const auto snapshot = WorkspaceScanner{}.scan(root);
     QCOMPARE(snapshot.projects.size(), size_t(3));
     QCOMPARE(snapshot.tasks.size(), size_t(13));

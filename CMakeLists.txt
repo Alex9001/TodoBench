@@ -10,6 +10,11 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTORCC ON)
 
+if(MSVC)
+    add_compile_options(/utf-8)
+    add_link_options("/MANIFESTINPUT:${CMAKE_SOURCE_DIR}/packaging/windows/long-paths.manifest")
+endif()
+
 option(TODOBENCH_BUILD_TESTS "Build TodoBench tests" ON)
 
 find_package(Qt6 6.8 REQUIRED COMPONENTS Core Gui Widgets Svg Concurrent Test Network)

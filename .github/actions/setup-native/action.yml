@@ -27,6 +27,7 @@ runs:
     - if: runner.os == 'Windows'
       shell: pwsh
       run: |
+        Add-Content $env:GITHUB_ENV "QT_QPA_FONTDIR=$env:WINDIR/Fonts"
         choco install ninja 7zip nsis -y --no-progress
         Add-Content $env:GITHUB_PATH 'C:\Program Files\7-Zip'
         Add-Content $env:GITHUB_PATH 'C:\Program Files (x86)\NSIS'

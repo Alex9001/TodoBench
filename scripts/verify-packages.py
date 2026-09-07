@@ -23,6 +23,8 @@ def smoke(binary, state):
         (state / name).mkdir(exist_ok=True)
         env[variable] = str(state / name)
     env.update(QT_QPA_PLATFORM='offscreen', APPIMAGE_EXTRACT_AND_RUN='1')
+    if os.name == 'nt':
+        env['QT_QPA_FONTDIR'] = str(Path(os.environ['WINDIR']) / 'Fonts')
     assert 'TodoBench' in run(str(binary), '--version', env=env)
     fixture = Path(__file__).resolve().parents[1] / 'docs/fixtures/workspace-v1'
     workspace = state / 'workspace'
