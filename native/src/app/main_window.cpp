@@ -512,7 +512,7 @@ void MainWindow::create_actions() {
     connect(commander_preset, &QAction::triggered, this, [this] { set_keyboard_preset("total_commander"); });
     connect(diagnostics, &QAction::triggered, this, [this] { show_diagnostics(); });
     connect(about, &QAction::triggered, this, [this] {
-        QMessageBox::about(this, "About TodoBench", "TodoBench " TODOBENCH_VERSION "\nNative Markdown workspace task manager.\n\nCopyright © 2026 TodoBench contributors.\nGPL-3.0-or-later. You may redistribute and modify this software.\nThis program comes with absolutely no warranty.\nSee the bundled LICENSE or https://www.gnu.org/licenses/gpl-3.0.html");
+        QMessageBox::about(this, "About TodoBench", "TodoBench " TODOBENCH_VERSION "\nNative Markdown workspace task manager.\n\nCopyright © 2026 Aleksandr Oreshkin.\nGPL-3.0-or-later. You may redistribute and modify this software.\nThis program comes with absolutely no warranty.\nSee the bundled LICENSE or https://www.gnu.org/licenses/gpl-3.0.html");
     });
     connect(quit, &QAction::triggered, this, [this] { quit_application(); });
     set_action_icon(duplicate, "copy");

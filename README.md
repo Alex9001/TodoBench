@@ -146,6 +146,6 @@ Found a problem or have an idea? [Open an issue](https://github.com/Alex9001/Tod
 
 ## License
 
-Copyright © 2026 TodoBench contributors. Free software under **GPL-3.0-or-later**. You may redistribute and modify it under version 3 of the GNU General Public License, or any later version. It comes without any warranty.
+Copyright © 2026 Aleksandr Oreshkin. Free software under **GPL-3.0-or-later**. You may redistribute and modify it under version 3 of the GNU General Public License, or any later version. It comes without any warranty.
 
 See [LICENSE](LICENSE) and [third-party notices](packaging/THIRD_PARTY_NOTICES.md), including Qt and the bundled Lucide icons. Corresponding source and build instructions accompany release binaries.
