@@ -368,60 +368,81 @@ void MainWindowTest::diagnosticsExplainsWorkspaceState_data() {
     QTest::newRow("duplicate task") << 3;
 }
 
-void MainWindowTest::diagnosticsExplainsWorkspaceState() {
-    QFETCH(int, scenario);
-    QTemporaryDir temporary;
-    const auto root = std::filesystem::path(temporary.path().toStdString()) / "workspace";
-    MainWindow window;
-    if (scenario != 0) {
-        QVERIFY(seed_task(root));
-        const auto snapshot = WorkspaceScanner{}.scan(root);
-        const auto task_path = std::filesystem::path(snapshot.tasks.begin()->second.source_path);
-        if (scenario == 2) {
-            std::ofstream output(task_path);
-            output << "---\ntitle: [broken\n---\nNotes\n";
-        }
-        if (scenario == 3) {
-            const auto duplicate = task_path.parent_path().parent_path() / "duplicate";
-            std::filesystem::create_directories(duplicate);
-            std::filesystem::copy_file(task_path, duplicate / "task.md");
-        }
-        window.open_workspace(root);
+namespace {
+bool prepare_diagnostics_workspace(const std::filesystem::path& root, int scenario) {
+    if (scenario == 0) return true;
+    if (!seed_task(root)) return false;
+    const auto snapshot = WorkspaceScanner{}.scan(root);
+    const auto task_path = std::filesystem::path(snapshot.tasks.begin()->second.source_path);
+    if (scenario == 2) {
+        std::ofstream output(task_path);
+        output << "---\ntitle: [broken\n---\nNotes\n";
     }
-    QAction* action = nullptr;
-    for (auto* candidate : window.findChildren<QAction*>()) {
-        if (candidate->text() == "Workspace &Diagnostics") action = candidate;
+    if (scenario == 3) {
+        const auto duplicate = task_path.parent_path().parent_path() / "duplicate";
+        std::filesystem::create_directories(duplicate);
+        std::filesystem::copy_file(task_path, duplicate / "task.md");
     }
-    QVERIFY(action != nullptr);
+    return true;
+}
+
+QAction* diagnostics_action(MainWindow& window) {
+    for (auto* action : window.findChildren<QAction*>()) {
+        if (action->text() == "Workspace &Diagnostics") return action;
+    }
+    return nullptr;
+}
+
+struct DiagnosticsResult {
     QString text;
     QString information;
     QString details;
-    bool has_import = false;
+    bool has_import{false};
+};
+
+DiagnosticsResult inspect_diagnostics(MainWindow& window, QAction* action) {
+    DiagnosticsResult result;
     QTimer::singleShot(0, &window, [&] {
         auto* box = qobject_cast<QMessageBox*>(QApplication::activeModalWidget());
         if (box == nullptr) return;
-        text = box->text();
-        information = box->informativeText();
-        details = box->detailedText();
+        result.text = box->text();
+        result.information = box->informativeText();
+        result.details = box->detailedText();
         for (auto* button : box->buttons()) {
-            if (button->text() == "Import as a separate task") has_import = true;
+            if (button->text() == "Import as a separate task") result.has_import = true;
         }
         box->reject();
     });
     action->trigger();
+    return result;
+}
+
+bool diagnostics_result_matches(const DiagnosticsResult& result, int scenario, const std::filesystem::path& root) {
     if (scenario == 0) {
-        QCOMPARE(text, QString("No workspace is open."));
-        QVERIFY(information.contains("File menu"));
-    } else {
-        QVERIFY(information.contains("last workspace scan"));
-        QVERIFY(information.contains(QString::fromStdString(root.string())));
-        QVERIFY(information.contains("File → Refresh"));
-        QCOMPARE(text, scenario == 1 ? QString("No workspace problems found.")
-                                    : QString("Workspace problems need attention."));
-        QCOMPARE(details.isEmpty(), scenario == 1);
+        return result.text == "No workspace is open." && result.information.contains("File menu")
+            && !result.has_import;
     }
-    QCOMPARE(has_import, scenario == 3);
-    if (scenario == 3) QVERIFY(details.contains("duplicate task id"));
+    const auto expected = scenario == 1 ? "No workspace problems found." : "Workspace problems need attention.";
+    const bool context = result.information.contains("last workspace scan")
+        && result.information.contains(QString::fromStdString(root.string()))
+        && result.information.contains("File → Refresh");
+    const bool recovery = result.has_import == (scenario == 3)
+        && (scenario != 3 || result.details.contains("duplicate task id"));
+    return context && recovery && result.text == expected && result.details.isEmpty() == (scenario == 1);
+}
+}  // namespace
+
+void MainWindowTest::diagnosticsExplainsWorkspaceState() {
+    QFETCH(int, scenario);
+    QTemporaryDir temporary;
+    const auto root = std::filesystem::path(temporary.path().toStdString()) / "workspace";
+    QVERIFY(prepare_diagnostics_workspace(root, scenario));
+    MainWindow window;
+    if (scenario != 0) window.open_workspace(root);
+    auto* action = diagnostics_action(window);
+    QVERIFY(action != nullptr);
+    const auto result = inspect_diagnostics(window, action);
+    QVERIFY(diagnostics_result_matches(result, scenario, root));
 }
 
 void MainWindowTest::sampleWorkflowRenders_data() {
