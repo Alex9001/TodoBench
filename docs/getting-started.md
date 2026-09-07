@@ -39,3 +39,15 @@ Use **View > Appearance** for System, Light, Dark, Midnight, Blue, Green, Brown,
 
 Choose **View > Appearance > Customize theme** or **Edit > Settings > Appearance** to adjust backgrounds, text, buttons, selection, borders, and links. Click a swatch for the color picker or enter `#RRGGBB`; leave a field blank to inherit its preset. Each preset remembers its own overrides in the workspace's `settings.json`. The preview updates immediately, flags low text/selection contrast, and offers individual and whole-preset resets. **OK** applies; **Cancel** discards changes. Task formatting rules and tag colors remain separate.
 
+
+## Check a workspace for problems
+
+**Help → Workspace Diagnostics** reports the last workspace scan. It checks task
+and project metadata, duplicate IDs, and subtask relationships. A healthy workspace
+shows **No workspace problems found**, with its folder and loaded project/task
+counts. If no workspace is open, the dialog explains how to open one first.
+
+When problems are found, expand **Show Details** to see their paths and messages.
+Duplicate tasks retain the **Import as a separate task** recovery action. After
+editing files with another tool, use **File → Refresh** to scan again. Diagnostics
+does not inspect attachment contents or verify backups.

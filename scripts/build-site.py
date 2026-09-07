@@ -57,6 +57,25 @@ def release_inventory(path):
     return release
 
 
+def validate_local_link(link, output, page):
+    parsed = urlsplit(link)
+    if parsed.scheme or parsed.netloc:
+        # GitHub documentation URLs must point to real repository files.
+        prefix = f'https://github.com/{REPO}/blob/main/'
+        if link.startswith(prefix):
+            target = ROOT / unquote(urlsplit(link.removeprefix(prefix)).path)
+            if not target.is_file():
+                raise ValueError(f'Missing documentation: {link}')
+        return
+    if parsed.path.startswith('/'):
+        raise ValueError(f'Use relative paths for GitHub project Pages: {link}')
+    target = (output / unquote(parsed.path or 'index.html')).resolve()
+    if not target.is_relative_to(output) or not target.is_file():
+        raise ValueError(f'Missing or nonportable local link: {link}')
+    if target.name == 'index.html' and parsed.fragment and unquote(parsed.fragment) not in page.ids:
+        raise ValueError(f'Missing section: {link}')
+
+
 def validate_links(page, output, release):
     assets = {asset['name'] for asset in release['assets']}
     download_base = f'https://github.com/{REPO}/releases/download/{release["tagName"]}/'
@@ -67,22 +86,7 @@ def validate_links(page, output, release):
             if name not in assets:
                 raise ValueError(f'Download absent from published release: {name}')
             downloads.add(name)
-        parsed = urlsplit(link)
-        if parsed.scheme or parsed.netloc:
-            # GitHub documentation URLs must point to real repository files.
-            prefix = f'https://github.com/{REPO}/blob/main/'
-            if link.startswith(prefix):
-                target = ROOT / unquote(urlsplit(link.removeprefix(prefix)).path)
-                if not target.is_file():
-                    raise ValueError(f'Missing documentation: {link}')
-            continue
-        if parsed.path.startswith('/'):
-            raise ValueError(f'Use relative paths for GitHub project Pages: {link}')
-        target = (output / unquote(parsed.path or 'index.html')).resolve()
-        if not target.is_relative_to(output) or not target.is_file():
-            raise ValueError(f'Missing or nonportable local link: {link}')
-        if target.name == 'index.html' and parsed.fragment and unquote(parsed.fragment) not in page.ids:
-            raise ValueError(f'Missing section: {link}')
+        validate_local_link(link, output, page)
     if len(downloads) != 10:
         raise ValueError('Expected 8 platform packages, checksums, and exact source')
     if page.headings != 1:

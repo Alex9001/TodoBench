@@ -1994,24 +1994,42 @@ void MainWindow::open_workspace_folder() {
 }
 
 void MainWindow::show_diagnostics() {
-    QString message;
-    int duplicates = 0;
-    for (const auto& diagnostic : controller_.snapshot().diagnostics) {
-        message += QString::fromStdString(diagnostic.path + ": " + diagnostic.message + "\n");
-        if (diagnostic.message == "duplicate task id") ++duplicates;
-    }
-    if (message.isEmpty()) message = "No workspace diagnostics.";
-    if (duplicates == 0) {
-        QMessageBox::information(this, "Workspace diagnostics", message);
-        return;
-    }
     QMessageBox box(this);
     box.setWindowTitle("Workspace diagnostics");
-    box.setText(message);
-    auto* import = box.addButton("Import as a separate task", QMessageBox::ActionRole);
+    box.setTextFormat(Qt::PlainText);
+    box.setIcon(QMessageBox::Information);
     box.addButton(QMessageBox::Close);
+    if (!controller_.is_open()) {
+        box.setText("No workspace is open.");
+        box.setInformativeText("Open or create a workspace from the File menu first. "
+            "Diagnostics reports problems reading task and project files, duplicate IDs, "
+            "and broken subtask relationships.");
+        box.exec();
+        return;
+    }
+    const auto& snapshot = controller_.snapshot();
+    QString details;
+    int duplicates = 0;
+    for (const auto& diagnostic : snapshot.diagnostics) {
+        const auto severity = diagnostic.severity == Diagnostic::Severity::Error ? "Error: " : "Warning: ";
+        details += QString::fromStdString(severity + diagnostic.path + "\n" + diagnostic.message + "\n\n");
+        if (diagnostic.message == "duplicate task id") ++duplicates;
+    }
+    const bool healthy = snapshot.diagnostics.empty();
+    box.setText(healthy ? "No workspace problems found." : "Workspace problems need attention.");
+    box.setIcon(healthy ? QMessageBox::Information : QMessageBox::Warning);
+    box.setInformativeText(QString("Results from the last workspace scan: %1 projects and %2 tasks loaded.\n\n"
+        "Checks cover task and project metadata, duplicate IDs, and subtask relationships. "
+        "This is not a check of attachment contents or a backup verification.\n\n"
+        "Use File → Refresh to scan again after changing files outside TodoBench.\n\nWorkspace: %3")
+        .arg(static_cast<qulonglong>(snapshot.projects.size()))
+        .arg(static_cast<qulonglong>(snapshot.tasks.size()))
+        .arg(QString::fromStdString(snapshot.root_path)));
+    if (!healthy) box.setDetailedText(details);
+    QPushButton* import = nullptr;
+    if (duplicates > 0) import = box.addButton("Import as a separate task", QMessageBox::ActionRole);
     box.exec();
-    if (box.clickedButton() == import) import_duplicate_from_diagnostics();
+    if (import != nullptr && box.clickedButton() == import) import_duplicate_from_diagnostics();
 }
 
 void MainWindow::schedule_autosave() {

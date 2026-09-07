@@ -18,6 +18,7 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QMenuBar>
+#include <QMessageBox>
 #include <QPixmap>
 #include <QSplitter>
 #include <QStackedWidget>
@@ -41,6 +42,8 @@ class MainWindowTest final : public QObject {
     Q_OBJECT
 private slots:
     void emptyWorkspaceShellIsUsable();
+    void diagnosticsExplainsWorkspaceState_data();
+    void diagnosticsExplainsWorkspaceState();
     void workspaceRendersTaskMetadata();
     void tutorialOpensWelcomeTask();
     void projectFilterNamesSurviveEditingAndTabSwitching();
@@ -355,6 +358,70 @@ void MainWindowTest::openTabButtonOpensSavedViews() {
     QCOMPARE(filter->text(), QString("project:\"Tutorial / Launch example\""));
     QVERIFY(choose_visible_tab(window, "All Tasks"));
     QCOMPARE(window.findChild<QTabBar*>("workspaceTabs")->currentIndex(), 0);
+}
+
+void MainWindowTest::diagnosticsExplainsWorkspaceState_data() {
+    QTest::addColumn<int>("scenario");
+    QTest::newRow("no workspace") << 0;
+    QTest::newRow("healthy workspace") << 1;
+    QTest::newRow("malformed metadata") << 2;
+    QTest::newRow("duplicate task") << 3;
+}
+
+void MainWindowTest::diagnosticsExplainsWorkspaceState() {
+    QFETCH(int, scenario);
+    QTemporaryDir temporary;
+    const auto root = std::filesystem::path(temporary.path().toStdString()) / "workspace";
+    MainWindow window;
+    if (scenario != 0) {
+        QVERIFY(seed_task(root));
+        const auto snapshot = WorkspaceScanner{}.scan(root);
+        const auto task_path = std::filesystem::path(snapshot.tasks.begin()->second.source_path);
+        if (scenario == 2) {
+            std::ofstream output(task_path);
+            output << "---\ntitle: [broken\n---\nNotes\n";
+        }
+        if (scenario == 3) {
+            const auto duplicate = task_path.parent_path().parent_path() / "duplicate";
+            std::filesystem::create_directories(duplicate);
+            std::filesystem::copy_file(task_path, duplicate / "task.md");
+        }
+        window.open_workspace(root);
+    }
+    QAction* action = nullptr;
+    for (auto* candidate : window.findChildren<QAction*>()) {
+        if (candidate->text() == "Workspace &Diagnostics") action = candidate;
+    }
+    QVERIFY(action != nullptr);
+    QString text;
+    QString information;
+    QString details;
+    bool has_import = false;
+    QTimer::singleShot(0, &window, [&] {
+        auto* box = qobject_cast<QMessageBox*>(QApplication::activeModalWidget());
+        if (box == nullptr) return;
+        text = box->text();
+        information = box->informativeText();
+        details = box->detailedText();
+        for (auto* button : box->buttons()) {
+            if (button->text() == "Import as a separate task") has_import = true;
+        }
+        box->reject();
+    });
+    action->trigger();
+    if (scenario == 0) {
+        QCOMPARE(text, QString("No workspace is open."));
+        QVERIFY(information.contains("File menu"));
+    } else {
+        QVERIFY(information.contains("last workspace scan"));
+        QVERIFY(information.contains(QString::fromStdString(root.string())));
+        QVERIFY(information.contains("File → Refresh"));
+        QCOMPARE(text, scenario == 1 ? QString("No workspace problems found.")
+                                    : QString("Workspace problems need attention."));
+        QCOMPARE(details.isEmpty(), scenario == 1);
+    }
+    QCOMPARE(has_import, scenario == 3);
+    if (scenario == 3) QVERIFY(details.contains("duplicate task id"));
 }
 
 void MainWindowTest::sampleWorkflowRenders_data() {
