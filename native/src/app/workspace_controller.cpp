@@ -334,7 +334,6 @@ bool WorkspaceController::move_task_branch(const std::string& task_id, const std
         task.project_id = destination_project_id;
         task.source_path = (destination / std::filesystem::path(task.source_path).parent_path().filename() / "task.md").string();
         if (task.id == task_id) task.parent_id = new_parent_id;
-        if (current_project_id != destination_project_id) task.source_hash.clear();
         if (!save_mutation(std::move(task), error)) return false;
     }
     std::string refresh_error;
@@ -356,7 +355,9 @@ SaveResult WorkspaceController::save_task(TaskRecord task) {
 bool WorkspaceController::undo_last_completion(std::string& error) {
     if (last_completion_tasks_.empty()) { error = "nothing to undo"; return false; }
     for (auto task : last_completion_tasks_) {
-        task.source_hash.clear();
+        const auto current = snapshot_.tasks.find(task.id);
+        if (current == snapshot_.tasks.end()) { error = "task disappeared before undo"; return false; }
+        task.source_hash = current->second.source_hash;
         if (!save_mutation(std::move(task), error)) return false;
     }
     if (!last_completion_history_id_.empty()) {
@@ -388,14 +389,17 @@ bool WorkspaceController::resolve_task_conflict(const TaskRecord& local, Conflic
         std::filesystem::remove(result.conflict_path, remove_error);
         return remove_error.value() == 0;
     }
+    std::ifstream conflict_input(result.conflict_path, std::ios::binary);
+    const std::string conflict_bytes((std::istreambuf_iterator<char>(conflict_input)), std::istreambuf_iterator<char>());
+    const auto conflict_hash = WorkspaceStore::hash_bytes(conflict_bytes);
     if (resolution == ConflictResolution::UseMerged) {
         auto merged = local;
         merged.body = merged_body;
-        merged.source_hash.clear();
+        merged.source_hash = conflict_hash;
         if (!save_mutation(std::move(merged), error)) return false;
     } else {
         auto local_version = local;
-        local_version.source_hash.clear();
+        local_version.source_hash = conflict_hash;
         if (!save_mutation(std::move(local_version), error)) return false;
     }
     std::error_code remove_error;
@@ -433,7 +437,6 @@ bool WorkspaceController::import_duplicate_as_separate(const std::string& source
     task.revision = new_id();
     task.updated_at = now();
     task.source_path = source_path;
-    task.source_hash.clear();
     if (!save_mutation(std::move(task), error)) return false;
     return refresh(error);
 }

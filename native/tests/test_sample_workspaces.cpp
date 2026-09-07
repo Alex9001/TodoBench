@@ -58,25 +58,29 @@ private slots:
     void advancedSampleRoundTripsArchive();
     void repeatedSamplesHaveIndependentIds();
 };
+bool sample_branding_is_valid(const QJsonObject& sample) {
+    if (sample.value("name").toString().contains("CYBER BRAND")) return false;
+    if (sample.value("description").toString().contains("CYBER BRAND")) return false;
+    const auto id = sample.value("id").toString();
+    const auto web = id == "moving" || id == "client" || id == "launch";
+    int mentions = 0;
+    for (const auto& value : sample.value("tasks").toArray()) {
+        const auto task = value.toObject();
+        if (task.value("title").toString().contains("CYBER BRAND")) return false;
+        const auto body = task.value("body").toString();
+        if (body.startsWith("# CYBER BRAND")) return false;
+        mentions += body.count("CYBER BRAND");
+    }
+    return mentions == (web ? 1 : 0);
+}
+
 void SampleWorkspacesTest::createsEachWorkflow_data() {
     QTest::addColumn<QString>("workflow");
     QTest::addColumn<int>("count");
     for (const auto& value : sample_workflows()) {
         const auto sample = value.toObject();
         const auto id = sample.value("id").toString();
-        // Branding stays in the opening web-client context, never in the chooser or task titles.
-        QVERIFY(!sample.value("name").toString().contains("CYBER BRAND"));
-        QVERIFY(!sample.value("description").toString().contains("CYBER BRAND"));
-        const bool web = id == "moving" || id == "client" || id == "launch";
-        int mentions = 0;
-        for (const auto& value : sample.value("tasks").toArray()) {
-            const auto task = value.toObject();
-            QVERIFY(!task.value("title").toString().contains("CYBER BRAND"));
-            const auto body = task.value("body").toString();
-            mentions += body.count("CYBER BRAND");
-            QVERIFY(!body.startsWith("# CYBER BRAND"));
-        }
-        QCOMPARE(mentions, web ? 1 : 0);
+        QVERIFY(sample_branding_is_valid(sample));
         const int count = id == "tutorial" ? 13 : static_cast<int>(sample.value("tasks").toArray().size());
         QTest::newRow(id.toUtf8().constData()) << id << count;
     }

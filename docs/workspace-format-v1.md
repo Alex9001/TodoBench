@@ -210,7 +210,10 @@ belong in the export.
 
 `.todobench/history/<completion-id>/` contains prior task Markdown snapshots.
 Trash directories retain moved task folders and `manifest.json`, whose v1
-`items` contain `task_id`, `original`, and `stored` paths. Recovery journal JSON
+`items` contain `task_id`, `original`, and `stored` paths. New manifests use
+workspace-relative paths. Legacy absolute paths are accepted only within the
+current workspace; imported/moved bundles resolve stored items inside their
+own `items/` directory and restore outside-workspace originals into Inbox. Recovery journal JSON
 contains `id`, `operation`, `phase` (`started` or `completed`), and `paths`.
 Conflicts retain competing versions. These are opaque recovery material to
 external editors: include them in snapshots, but do not execute paths or replay

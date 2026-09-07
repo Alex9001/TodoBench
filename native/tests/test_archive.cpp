@@ -296,7 +296,8 @@ bool restored_workspace_matches(const SeededWorkspace& seeded, const std::filesy
 QString seven_zip_path() {
     const auto found = QStandardPaths::findExecutable("7z");
     if (!found.isEmpty()) return found;
-    return QStandardPaths::findExecutable("7za");
+    const auto modern = QStandardPaths::findExecutable("7zz");
+    return modern.isEmpty() ? QStandardPaths::findExecutable("7za") : modern;
 }
 
 bool run_command(const QString& program, const QStringList& args, const QString& working_directory, QString& error) {

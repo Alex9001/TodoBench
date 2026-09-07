@@ -31,6 +31,7 @@ jobs:
       - if: runner.os != 'Windows'
         run: cmake --preset dev
       - if: runner.os == 'Windows'
+        shell: pwsh
         run: cmake --preset dev "-DCMAKE_TOOLCHAIN_FILE=$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"
       - run: cmake --build --preset dev --parallel 3
       - run: ctest --preset dev --output-on-failure --timeout 90

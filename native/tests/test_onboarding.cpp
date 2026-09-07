@@ -106,6 +106,25 @@ void OnboardingTest::failedCreationKeepsWizardOpen() {
     QVERIFY(wizard.isVisible());
     QCOMPARE(wizard.findChild<QLabel*>("setupError")->text(), QString("Disk is full"));
 }
+bool save_workflow_screenshots(OnboardingWizard& wizard, const QString& screenshots) {
+    auto* choices = wizard.findChild<QListWidget*>("sampleWorkflows");
+    const auto selected = choices->currentRow();
+    for (int row = 0; row < choices->count(); ++row) {
+        choices->setCurrentRow(row);
+        QApplication::processEvents();
+        if (!wizard.grab().save(screenshots + "/workflow-" + QString::number(row) + ".png")) return false;
+    }
+    choices->setCurrentRow(selected);
+    return true;
+}
+
+bool save_onboarding_page(OnboardingWizard& wizard, const QString& screenshots, int page) {
+    if (screenshots.isEmpty()) return true;
+    QDir().mkpath(screenshots);
+    if (!wizard.grab().save(screenshots + "/page-" + QString::number(page) + ".png")) return false;
+    return page != 1 || save_workflow_screenshots(wizard, screenshots);
+}
+
 void OnboardingTest::rendersPages() {
     QTemporaryDir temporary;
     OnboardingWizard wizard(nullptr, [](const auto&, auto&) { return true; });
@@ -115,20 +134,7 @@ void OnboardingTest::rendersPages() {
     for (int page = 0; page < 5; ++page) {
         QApplication::processEvents();
         QCOMPARE(wizard.currentId(), page);
-        if (!screenshots.isEmpty()) {
-            QDir().mkpath(screenshots);
-            QVERIFY(wizard.grab().save(screenshots + "/page-" + QString::number(page) + ".png"));
-            if (page == 1) {
-                auto* choices = wizard.findChild<QListWidget*>("sampleWorkflows");
-                const auto selected = choices->currentRow();
-                for (int row = 0; row < choices->count(); ++row) {
-                    choices->setCurrentRow(row);
-                    QApplication::processEvents();
-                    QVERIFY(wizard.grab().save(screenshots + "/workflow-" + QString::number(row) + ".png"));
-                }
-                choices->setCurrentRow(selected);
-            }
-        }
+        QVERIFY(save_onboarding_page(wizard, screenshots, page));
         if (page < 4) wizard.next();
     }
 }

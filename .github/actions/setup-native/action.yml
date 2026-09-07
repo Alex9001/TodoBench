@@ -23,7 +23,7 @@ runs:
       shell: bash
       run: |
         brew install ninja yaml-cpp libarchive sevenzip
-        echo "CMAKE_PREFIX_PATH=$(brew --prefix libarchive);$(brew --prefix yaml-cpp);$CMAKE_PREFIX_PATH" >> "$GITHUB_ENV"
+        echo "CMAKE_PREFIX_PATH=$(brew --prefix libarchive):$(brew --prefix yaml-cpp):$CMAKE_PREFIX_PATH" >> "$GITHUB_ENV"
     - if: runner.os == 'Windows'
       shell: pwsh
       run: |

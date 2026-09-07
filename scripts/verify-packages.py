@@ -4,6 +4,7 @@ from pathlib import Path
 import os
 import platform
 import shutil
+import signal
 import subprocess
 import sys
 import tarfile
@@ -26,12 +27,17 @@ def smoke(binary, state):
     fixture = Path(__file__).resolve().parents[1] / 'docs/fixtures/workspace-v1'
     workspace = state / 'workspace'
     shutil.copytree(fixture, workspace, dirs_exist_ok=True)
-    process = subprocess.Popen([str(binary), str(workspace)], env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    process = subprocess.Popen([str(binary), str(workspace)], env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, start_new_session=(os.name != "nt"))
     try:
         time.sleep(3)
         assert process.poll() is None, process.communicate()
     finally:
-        if process.poll() is None:
+        if os.name != "nt":
+            try:
+                os.killpg(process.pid, signal.SIGTERM)
+            except ProcessLookupError:
+                pass
+        elif process.poll() is None:
             process.terminate()
         process.communicate(timeout=15)
 

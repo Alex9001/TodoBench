@@ -26,12 +26,13 @@ std::filesystem::path manifest_path(const std::filesystem::path& root, const std
 }
 
 bool write_manifest(const std::filesystem::path& path, const std::vector<TrashManifestEntry>& entries, std::string& error) {
+    const auto workspace = path.parent_path().parent_path().parent_path().parent_path();
     QJsonArray items;
     for (const auto& entry : entries) {
         QJsonObject item;
         item["task_id"] = QString::fromStdString(entry.task_id);
-        item["original"] = QString::fromStdString(entry.original.string());
-        item["stored"] = QString::fromStdString(entry.stored.string());
+        item["original"] = QString::fromStdString(entry.original.lexically_relative(workspace).generic_string());
+        item["stored"] = QString::fromStdString(entry.stored.lexically_relative(workspace).generic_string());
         items.append(item);
     }
     QJsonObject manifest;
@@ -58,6 +59,29 @@ bool read_manifest(const std::filesystem::path& path, std::vector<TrashManifestE
                            item.value("stored").toString().toStdString()});
     }
     return !entries.empty();
+}
+
+bool within(const std::filesystem::path& path, const std::filesystem::path& root) {
+    const auto relative = std::filesystem::weakly_canonical(path).lexically_relative(std::filesystem::weakly_canonical(root));
+    return !relative.empty() && *relative.begin() != ".." && relative != ".";
+}
+
+bool resolve_manifest_paths(std::vector<TrashManifestEntry>& entries, const std::filesystem::path& bundle,
+                            const std::filesystem::path& fallback, std::string& error) {
+    const auto workspace = bundle.parent_path().parent_path().parent_path();
+    if (!within(fallback, workspace / "projects")) { error = "restore destination is outside projects"; return false; }
+    for (auto& entry : entries) {
+        // The legacy format used absolute paths. Only use its basename to locate
+        // the item inside this bundle after a workspace has been moved/imported.
+        auto stored = entry.stored.is_absolute() ? entry.stored : workspace / entry.stored;
+        if (!within(stored, bundle / "items")) stored = bundle / "items" / entry.stored.filename();
+        if (!within(stored, bundle / "items")) { error = "unsafe stored trash path"; return false; }
+        auto original = entry.original.is_absolute() ? entry.original : workspace / entry.original;
+        if (!within(original, workspace / "projects")) original = fallback / stored.filename();
+        entry.stored = stored;
+        entry.original = original;
+    }
+    return true;
 }
 
 std::filesystem::path unique_destination(const std::filesystem::path& directory, const std::filesystem::path& source,
@@ -99,10 +123,13 @@ TrashResult TrashStore::move_to_trash(const std::vector<TaskRecord>& tasks) {
 }
 
 TrashResult TrashStore::restore(const std::string& id, const std::filesystem::path& fallback_tasks) {
+    if (std::filesystem::path(id).filename().string() != id || id == "." || id == "..")
+        return {TrashStatus::Error, id, "invalid trash id", 0, 0};
     const auto manifest = manifest_path(root_, id);
     std::vector<TrashManifestEntry> entries;
     std::string error;
     if (!read_manifest(manifest, entries, error)) return {TrashStatus::Error, id, error, 0, 0};
+    if (!resolve_manifest_paths(entries, root_ / id, fallback_tasks, error)) return {TrashStatus::Error, id, error, 0, 0};
     std::vector<std::string> paths;
     for (const auto& entry : entries) paths.push_back(entry.stored.string());
     RecoveryJournal journal(root_.parent_path().parent_path());

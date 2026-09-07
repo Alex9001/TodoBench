@@ -65,6 +65,7 @@ SaveResult WorkspaceStore::create_workspace(const std::filesystem::path& root, c
 }
 
 SaveResult WorkspaceStore::create_task(TaskRecord& task) const {
+    if (std::filesystem::exists(task.source_path)) return {SaveStatus::Conflict, task.source_path, "task already exists"};
     const auto project_directory = std::filesystem::path(task.source_path).parent_path();
     std::error_code error;
     std::filesystem::create_directories(project_directory, error);
@@ -148,6 +149,8 @@ SaveResult WorkspaceStore::save_task(const TaskRecord& task) const {
     if (!task.source_hash.empty() && hash_bytes(current) != task.source_hash) {
         return {SaveStatus::Conflict, path.string(), "task changed on disk while it was being edited"};
     }
+    if (task.source_hash.empty() && std::filesystem::exists(path))
+        return {SaveStatus::Conflict, path.string(), "existing task must be loaded before saving"};
     QSaveFile output(QString::fromStdString(path.string()));
     if (!output.open(QIODevice::WriteOnly)) return {SaveStatus::Error, path.string(), output.errorString().toStdString()};
     const auto content = serialize_task_markdown(task);

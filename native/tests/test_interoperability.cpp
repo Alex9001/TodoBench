@@ -5,6 +5,7 @@
 #include "storage/workspace_scanner.h"
 #include "storage/workspace_archive.h"
 #include "storage/archive_safety.h"
+#include "storage/trash_store.h"
 #include "app/markdown_editor.h"
 #include "app/icons.h"
 #include <QFile>
@@ -79,7 +80,7 @@ private slots:
         settings.saved_views[0].sort = TaskSort::Due;
         settings.workspace_name = "new name";
         std::string error;
-        QVERIFY2(save_settings(path, settings, error), error.c_str());
+        QVERIFY(save_settings(path, settings, error));
         auto object = QJsonDocument::fromJson(QByteArray::fromStdString(read(path))).object();
         QVERIFY(object["x"].toObject()["nested"].isArray());
         QVERIFY(object["saved_views"].toArray()[0].toObject()["x"].toObject()["keep"].toBool());
@@ -134,6 +135,37 @@ private slots:
             QVERIFY(!WorkspaceArchive::import_workspace(root / "truncated.7z", root / "bad").success);
             QVERIFY(!std::filesystem::exists(root / "bad"));
         }
+    }
+    void importedTrashRestoresInsideWorkspace() {
+        QTemporaryDir temp;
+        const auto root = std::filesystem::path(temp.path().toStdString());
+        const auto workspace = root / "original";
+        QVERIFY(WorkspaceStore::create_workspace(workspace, "Test").status == SaveStatus::Saved);
+        const auto project = WorkspaceScanner{}.scan(workspace).projects.begin()->second;
+        TaskRecord task;
+        task.id = "123e4567-e89b-42d3-a456-426614174001";
+        task.source_path = (std::filesystem::path(project.source_path).parent_path() / "tasks/item/task.md").string();
+        QVERIFY(WorkspaceStore(workspace).create_task(task).status == SaveStatus::Saved);
+        const auto trashed = TrashStore(workspace).move_to_trash({task});
+        QCOMPARE(trashed.status, TrashStatus::Succeeded);
+        QVERIFY(WorkspaceArchive::export_workspace(workspace, root / "snapshot.7z").success);
+        QVERIFY(WorkspaceArchive::import_workspace(root / "snapshot.7z", root / "imported").success);
+        const auto imported = root / "imported";
+        const auto imported_project = WorkspaceScanner{}.scan(imported).projects.begin()->second;
+        const auto fallback = std::filesystem::path(imported_project.source_path).parent_path() / "tasks";
+        QCOMPARE(TrashStore(imported).restore(trashed.id, fallback).status, TrashStatus::Succeeded);
+        QVERIFY(!std::filesystem::exists(task.source_path));
+        QCOMPARE(WorkspaceScanner{}.scan(imported).tasks.size(), size_t(1));
+    }
+    void conflictingArchivePrefixes() {
+        std::string error;
+        QVERIFY(validate_archive_manifest({{"Dir/a", ArchiveEntryType::RegularFile},
+            {"dir/b", ArchiveEntryType::RegularFile}}, error).empty());
+        QVERIFY(!error.empty());
+        error.clear();
+        QVERIFY(validate_archive_manifest({{"dir", ArchiveEntryType::RegularFile},
+            {"dir/b", ArchiveEntryType::RegularFile}}, error).empty());
+        QVERIFY(!error.empty());
     }
     void iconsRender() {
         for (const auto* name : {"paperclip", "settings", "corner-down-right", "check", "arrow-right", "trash-2", "list-checks"}) {
