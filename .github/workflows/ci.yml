@@ -13,7 +13,7 @@ jobs:
   workflow-lint:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - run: |
           curl --fail --location --retry 3 --output actionlint.tgz https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz
           echo "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8  actionlint.tgz" | sha256sum --check --strict
@@ -26,7 +26,7 @@ jobs:
       matrix:
         os: [ubuntu-24.04, windows-2025, macos-15-intel, macos-14]
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - uses: ./.github/actions/setup-native
       - if: runner.os != 'Windows'
         run: cmake --preset dev
@@ -41,7 +41,7 @@ jobs:
   sanitizers:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - uses: ./.github/actions/setup-native
       - run: cmake --preset asan
       - run: cmake --build --preset asan --parallel 3
