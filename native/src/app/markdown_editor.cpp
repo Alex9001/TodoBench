@@ -279,7 +279,9 @@ bool MarkdownEditor::is_dirty() const { return markdown() != original_markdown_;
 
 void MarkdownEditor::mark_clean() {
     original_markdown_ = markdown();
-    if (!visual_dirty_) original_source_text_ = source_->toPlainText();
+    QTextDocument normalized;
+    normalized.setPlainText(QString::fromStdString(original_markdown_));
+    original_source_text_ = normalized.toPlainText();
     update_dirty_state();
 }
 

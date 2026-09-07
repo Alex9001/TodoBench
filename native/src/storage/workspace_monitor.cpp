@@ -4,6 +4,7 @@
 #include <QStringList>
 
 #include <algorithm>
+#include <chrono>
 #include <vector>
 
 namespace todobench {
@@ -20,7 +21,7 @@ std::string file_signature_line(const std::filesystem::path& path, std::error_co
     const auto size = std::filesystem::file_size(path, error);
     if (error) return {};
     return path.generic_string() + '\0' + std::to_string(size) + '\0'
-        + std::to_string(time.time_since_epoch().count()) + '\n';
+        + std::to_string(std::chrono::duration_cast<std::chrono::nanoseconds>(time.time_since_epoch()).count()) + '\n';
 }
 
 }  // namespace

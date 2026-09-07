@@ -314,16 +314,24 @@ QString item_key(const QJsonValue& value) {
 
 QJsonValue preserve_extensions(const QJsonValue& original, const QJsonValue& before, const QJsonValue& after);
 
+qsizetype matching_item(const QJsonArray& values, const QString& key) {
+    if (key.isEmpty()) return -1;
+    for (qsizetype i = 0; i < values.size(); ++i) {
+        if (item_key(values[i]) == key) return i;
+    }
+    return -1;
+}
+
 QJsonArray preserve_array(const QJsonArray& original, const QJsonArray& before, const QJsonArray& after) {
     QJsonArray result;
     for (qsizetype i = 0; i < after.size(); ++i) {
-        const auto key = item_key(after[i]);
-        qsizetype match = -1;
-        for (qsizetype j = 0; j < before.size(); ++j) {
-            if (!key.isEmpty() && item_key(before[j]) == key) { match = j; break; }
-        }
-        if (match >= 0 && match < original.size())
-            result.append(preserve_extensions(original[match], before[match], after[i]));
+        auto match = matching_item(before, item_key(after[i]));
+        // A name change keeps the original object's extensions. A reordered
+        // existing object is matched by identity before considering position.
+        if (match < 0 && i < before.size() && matching_item(after, item_key(before[i])) < 0) match = i;
+        const auto original_index = match < 0 ? -1 : matching_item(original, item_key(before[match]));
+        if (original_index >= 0)
+            result.append(preserve_extensions(original[original_index], before[match], after[i]));
         else result.append(after[i]);
     }
     return result;
@@ -360,6 +368,7 @@ bool save_settings(const std::filesystem::path& path, const Settings& settings, 
         error = "existing settings must be loaded successfully before saving";
         return false;
     }
+    if (recognized == settings.recognized_json && !settings.source_hash.empty()) return true;
     QSaveFile output(QString::fromStdString(path.string()));
     if (!output.open(QIODevice::WriteOnly)) { error = output.errorString().toStdString(); return false; }
     if (output.write(bytes) != bytes.size() || !output.commit()) { error = output.errorString().toStdString(); return false; }

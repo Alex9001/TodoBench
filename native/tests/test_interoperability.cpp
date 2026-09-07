@@ -93,6 +93,20 @@ private slots:
         QVERIFY(!save_settings(path, settings, error));
         QCOMPARE(read(path), external);
     }
+    void renameViewRetainsExtensions() {
+        QTemporaryDir temp;
+        const auto path = std::filesystem::path(temp.path().toStdString()) / "settings.json";
+        const std::string raw = "{ \"saved_views\": [{\"name\":\"old\",\"x\": {\"keep\":true}}] }\r\n";
+        write(path, raw);
+        auto settings = std::get<Settings>(load_settings(path));
+        std::string error;
+        QVERIFY(save_settings(path, settings, error));
+        QCOMPARE(read(path), raw);
+        settings.saved_views[0].name = "renamed";
+        QVERIFY(save_settings(path, settings, error));
+        const auto object = QJsonDocument::fromJson(QByteArray::fromStdString(read(path))).object();
+        QVERIFY(object["saved_views"].toArray()[0].toObject()["x"].toObject()["keep"].toBool());
+    }
     void invalidSettings_data() {
         QTest::addColumn<QString>("json");
         QTest::newRow("duplicate") << "{\"x\":1,\"x\":2}";
