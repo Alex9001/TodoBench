@@ -1,4 +1,8 @@
 build/
+native/mdbase_bridge/target/
+native/mdbase_oracle/ts/node_modules/
+native/mdbase_oracle/ts/dist/
+.mdbase/
 .venv/
 .vscode/
 .idea/

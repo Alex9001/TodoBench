@@ -18,6 +18,10 @@ struct SavedView {
     std::string name;
     std::string filter_expression;
     TaskSort sort{TaskSort::Manual};
+    std::string layout{"list"};
+    std::vector<int> hidden_columns{};
+    std::vector<std::string> expanded_task_ids{};
+    bool expansion_initialized{false};
 };
 
 struct OpenViewTab {
@@ -27,6 +31,10 @@ struct OpenViewTab {
     std::string selected_task_id;
     int scroll_value{0};
     bool all_tasks{false};
+    std::string layout{"list"};
+    std::vector<int> hidden_columns{};
+    std::vector<std::string> expanded_task_ids{};
+    bool expansion_initialized{false};
 };
 
 struct Settings {
@@ -53,6 +61,8 @@ struct Settings {
     std::unordered_map<std::string, std::string> tag_colors;
     std::unordered_map<std::string, std::string> project_icons;
     std::vector<KeyBinding> keyboard_overrides;
+    bool details_visible{true};
+    int details_pane_width{600};
 };
 
 struct SettingsError { std::string message; };

@@ -1,0 +1,18 @@
+[package]
+name = "todobench-mdbase-bridge"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.94"
+description = "C ABI over mdbase-rs 0.4.0-rc.4 (pinned ca71aeb) for TodoBench transfer"
+license = "MIT"
+repository = "https://github.com/Alex9001/TodoBench"
+
+[lib]
+name = "todobench_mdbase_bridge"
+crate-type = ["staticlib"]
+
+[dependencies]
+mdbase = { path = "vendor/mdbase-rs" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+serde_yaml = "0.9"

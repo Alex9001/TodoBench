@@ -6,6 +6,8 @@
 #include <QCheckBox>
 #include <QComboBox>
 #include <QDialog>
+#include <QScreen>
+#include <QAbstractButton>
 #include <QDialogButtonBox>
 #include <QFormLayout>
 #include <QHBoxLayout>
@@ -192,6 +194,8 @@ std::vector<ReminderData> reminders_from_table(QTableWidget* table, bool& valid)
 
 }  // namespace
 
+bool recurrence_enabled(const std::string& yaml) { return parse_recurrence_data(yaml).enabled; }
+
 QString recurrence_summary(const std::string& yaml) {
     const auto value = parse_recurrence_data(yaml);
     if (!value.enabled) return "Does not repeat";
@@ -212,6 +216,17 @@ QString reminders_summary(const std::string& yaml) {
     if (values.empty()) return "No reminders";
     if (values.size() == 1) return reminder_offset_label(values.front().minutes_before);
     return QString("%1 reminders").arg(values.size());
+}
+
+void position_schedule_picker(QDialog& dialog, QWidget* anchor) {
+    if (qobject_cast<QAbstractButton*>(anchor) == nullptr) return;
+    dialog.adjustSize();
+    const auto screen = anchor->screen()->availableGeometry();
+    auto position = anchor->mapToGlobal(QPoint(0, anchor->height()));
+    position.setX(std::clamp(position.x(), screen.left(), std::max(screen.left(), screen.right() - dialog.width())));
+    if (position.y() + dialog.height() > screen.bottom()) position.setY(anchor->mapToGlobal(QPoint(0, 0)).y() - dialog.height());
+    position.setY(std::max(screen.top(), position.y()));
+    dialog.move(position);
 }
 
 bool edit_recurrence(QWidget* parent, std::string& yaml, const QDate& due_date) {
@@ -273,6 +288,7 @@ bool edit_recurrence(QWidget* parent, std::string& yaml, const QDate& due_date) 
     layout->addWidget(buttons);
     QObject::connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
     QObject::connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+    position_schedule_picker(dialog, parent);
     if (dialog.exec() != QDialog::Accepted) return false;
     if (enabled->isChecked() && !due_date.isValid()) {
         QMessageBox::warning(parent, "Recurrence", "Set a valid due date before enabling recurrence.");
@@ -325,6 +341,7 @@ bool edit_reminders(QWidget* parent, std::string& yaml) {
     layout->addWidget(buttons);
     QObject::connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
     QObject::connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+    position_schedule_picker(dialog, parent);
     if (dialog.exec() != QDialog::Accepted) return false;
     bool valid = false;
     const auto values = reminders_from_table(table, valid);

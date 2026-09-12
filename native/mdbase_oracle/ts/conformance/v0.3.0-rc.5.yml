@@ -1,0 +1,96 @@
+kind: mdbase.conformance
+status: verified
+implementation:
+  id: mdbase-ts
+  name: mdbase TypeScript implementation
+  version: 0.3.0-rc.5
+  language: TypeScript
+  target: npm
+  url: https://github.com/callumalpass/mdbase
+spec_version: 0.3.0
+profiles:
+  - core_read
+  - collection_semantics
+  - cel
+  - cel_match
+  - cel_query
+  - links
+  - core_write
+  - lifecycle
+optional_features:
+  - view_records
+json_schema:
+  dialect: https://json-schema.org/draft/2020-12/schema
+  keywords:
+    - type
+    - required
+    - properties
+    - additionalProperties
+    - items
+    - enum
+    - const
+    - oneOf
+    - anyOf
+    - allOf
+    - if
+    - then
+    - else
+    - minimum
+    - maximum
+    - exclusiveMinimum
+    - exclusiveMaximum
+    - multipleOf
+    - minLength
+    - maxLength
+    - pattern
+    - minItems
+    - maxItems
+    - uniqueItems
+    - $defs
+    - $ref
+    - title
+    - description
+    - default
+    - examples
+  formats:
+    - date
+    - date-time
+    - time
+  remote_refs: false
+compatibility:
+  v0_2_read: true
+  v0_2_migrate: true
+limits:
+  external_schema_refs: false
+  schema_ref_roots:
+    - collection_root
+    - ancestor_pack_schemas/v0.3
+  operation_surface: v03Operations
+evidence:
+  - kind: testbed_transcript
+    command: npm run test:testbed -- --evidence conformance/testbed-v0.1.json
+    result: pass
+    verified_at: "2026-08-07T23:57:00+10:00"
+    artifact: conformance/testbed-v0.1.json
+    environment: Linux x86_64, Node.js 22
+    testbed_protocol_version: "0.1"
+    scenario_ids:
+      - core.shared-contract-consumers
+    evidence_digest: sha256:7cb868eae9f5f1ddab6b5f9ae9671551636c97f5ad20606752f2e63ec8864023
+  - kind: conformance_suite
+    command: npm run test -- test/v03-conformance.test.ts
+    result: pass
+    verified_at: "2026-08-07T23:57:00+10:00"
+    artifact: test/v03-conformance.test.ts
+    environment: Linux x86_64, Node.js 22
+  - kind: test_suite
+    command: npm test
+    result: pass
+    verified_at: "2026-08-07T23:57:00+10:00"
+    environment: Linux x86_64, Node.js 22
+  - kind: package_smoke
+    command: npm pack --dry-run
+    result: pass
+    verified_at: "2026-08-07T23:57:00+10:00"
+    artifact: callumalpass-mdbase-0.3.0-rc.5.tgz
+    environment: Linux x86_64, Node.js 22

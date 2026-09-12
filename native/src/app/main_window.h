@@ -13,6 +13,7 @@
 #include "storage/workspace_monitor.h"
 
 #include <QMainWindow>
+#include <QDate>
 
 #include <memory>
 
@@ -20,10 +21,11 @@ class QAction;
 class QCloseEvent;
 class QModelIndex;
 class QComboBox;
-class QCheckBox;
-class QDateEdit;
+class QCalendarWidget;
 class QLabel;
 class QLineEdit;
+class QListWidget;
+class QToolButton;
 class QImage;
 class QMenu;
 class QHBoxLayout;
@@ -40,6 +42,8 @@ class QTreeView;
 
 namespace todobench {
 
+class TaskTreeView;
+
 class MainWindow final : public QMainWindow {
 public:
     explicit MainWindow(QWidget* parent = nullptr);
@@ -52,10 +56,28 @@ protected:
 private:
     void create_actions();
     void create_layout();
+    QWidget* create_task_header(QWidget* parent);
+    void create_detail_pane();
+    QWidget* create_task_properties(QWidget* parent);
+    QToolButton* create_due_button(QWidget* parent);
+    void set_due_date(const QDate& date);
+    void update_detail_sections();
+    void update_property_buttons();
+    void set_details_visible(bool visible);
+    void show_details();
+    void set_task_layout(const QString& layout);
+    void apply_view_layout();
+    void change_current_status(TaskStatus status);
+    void populate_task_menu(QMenu* menu);
+    void show_task_menu(const QModelIndex& index, const QPoint& position);
+    void update_selection_bar();
+    void remember_expansion(const QModelIndex& index, bool expanded);
     void choose_workspace(bool create_new);
     void show_onboarding(bool new_only = false, const QString& notice = {});
     void export_workspace_archive();
     void import_workspace_archive();
+    void export_as_mdbase();
+    void import_from_mdbase();
     void refresh_view();
     void update_detail_availability();
     void update_filter(const QString& expression);
@@ -68,8 +90,9 @@ private:
     void new_view_tab();
     QWidget* create_tab_controls(QWidget* parent);
     void populate_tab_menu(QMenu* menu);
-    void add_tab_menu_action(QMenu* menu, const QString& label, const OpenViewTab& tab);
-    void open_view_tab(const OpenViewTab& tab);
+    void add_tab_menu_action(QMenu* menu, const QString& label, const OpenViewTab& tab,
+                             bool match_presentation = false);
+    void open_view_tab(const OpenViewTab& tab, bool match_presentation = false);
     void show_task_outside_view();
     void delete_saved_view();
     void set_sort(TaskSort sort);
@@ -118,6 +141,7 @@ private:
     void autosave_current_task();
     bool flush_pending_edits();
     SaveResult commit_current_task();
+    TaskRecord edited_current_task() const;
     void apply_save_result(const SaveResult& result, bool interactive);
     void set_workspace_readonly(bool readonly);
     void update_action_state();
@@ -131,9 +155,10 @@ private:
     void import_duplicate_from_diagnostics();
     void quit_application();
     bool should_hide_to_tray() const;
+    bool mdbase_transfer_in_progress_{false};
 
     WorkspaceController controller_;
-    QTreeView* task_view_{nullptr};
+    TaskTreeView* task_view_{nullptr};
     QStandardItemModel* task_model_{nullptr};
     QTabBar* view_tabs_{nullptr};
     std::vector<OpenViewTab> view_tab_states_;
@@ -160,6 +185,26 @@ private:
     QAction* show_task_action_{nullptr};
     QAction* settings_action_{nullptr};
     QAction* attach_action_{nullptr};
+    QAction* export_mdbase_action_{nullptr};
+    QAction* import_mdbase_action_{nullptr};
+    QAction* bulk_wait_action_{nullptr};
+    QAction* details_action_{nullptr};
+    QAction* list_action_{nullptr};
+    QAction* table_action_{nullptr};
+    QMenu* sort_menu_{nullptr};
+    QMenu* columns_menu_{nullptr};
+    QToolButton* details_menu_button_{nullptr};
+    QToolButton* due_button_{nullptr};
+    QToolButton* tags_button_{nullptr};
+    QWidget* selection_bar_{nullptr};
+    QLabel* selection_count_{nullptr};
+    QLabel* empty_list_label_{nullptr};
+    QLabel* save_feedback_{nullptr};
+    QLabel* subtasks_heading_{nullptr};
+    QLabel* attachments_heading_{nullptr};
+    QListWidget* subtasks_list_{nullptr};
+    QListWidget* attachments_list_{nullptr};
+    bool rebuilding_view_{false};
     bool applying_settings_{false};
     bool quitting_{false};
     bool conflict_dialog_active_{false};
@@ -168,8 +213,8 @@ private:
     QSystemTrayIcon* tray_icon_{nullptr};
     QLineEdit* title_edit_{nullptr};
     QLineEdit* tags_edit_{nullptr};
-    QCheckBox* due_enabled_{nullptr};
-    QDateEdit* due_edit_{nullptr};
+    QDate due_date_;
+    QCalendarWidget* due_calendar_{nullptr};
     QComboBox* status_edit_{nullptr};
     QComboBox* priority_edit_{nullptr};
     QLabel* project_value_{nullptr};
@@ -189,6 +234,7 @@ private:
     QMenu* recent_menu_{nullptr};
     QMenu* theme_menu_{nullptr};
     std::string current_task_id_;
+    std::string detail_source_hash_;
     std::string staged_recurrence_yaml_;
     std::string staged_reminders_yaml_{"[]"};
     std::string last_reminder_task_id_;

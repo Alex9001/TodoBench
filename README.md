@@ -45,6 +45,7 @@ TodoBench keeps your project tabs and task list beside the details of the select
 | Remember recurring work | Date-only scheduling, calendar-based or after-completion recurrence, and reminders |
 | Make the app comfortable | Eleven appearance choices, custom colors, and Browser or Total Commander keyboard presets |
 | Keep control of your data | Ordinary Markdown and JSON files, complete `.7z` snapshots, history, trash, and conflict recovery |
+| Import and export | Export your workspace as an [mdbase v0.3 collection](docs/mdbase-transfer-v1.md); import v0.3 collections with field mapping and preview |
 
 ## Download
 
@@ -120,7 +121,7 @@ Choose **View → Appearance** for System, Light, Dark, Midnight, Blue, Green, B
 
 ## Build from source
 
-TodoBench uses **C++20, Qt 6.8+** (release SDK: 6.8.3), CMake 3.24+, Ninja, yaml-cpp, and libarchive. Qt is supplied separately from the vcpkg manifest. Python 3.10+, the development requirements, and standalone 7-Zip are needed for validation.
+TodoBench uses **C++20, Qt 6.8+** (release SDK: 6.8.3), CMake 3.24+, Ninja, yaml-cpp, libarchive, and Rust 1.94 for the statically linked mdbase bridge. Qt is supplied separately from the vcpkg manifest. Python 3.10+, Node 22 for the development-only mdbase oracle, the development requirements, and standalone 7-Zip are needed for full validation. Packaged TodoBench does not require Rust or Node at runtime.
 
 ```bash
 python -m pip install -r requirements-dev.txt
@@ -132,7 +133,7 @@ python scripts/check-quality.py --build-dir build/dev
 
 Provide your Qt and dependency paths as described in the [build guide](docs/packaging.md#build-from-source). Windows uses MSVC and the pinned vcpkg baseline. Start the development build with `./build/dev/TodoBench`, optionally followed by a workspace path. The `asan` and `release` presets are also available.
 
-CI runs 17 native suites across Linux, Windows, Intel macOS, and Apple Silicon macOS, plus Linux sanitizers, complexity checks, and workflow lint. Release gates verify packaged startup, dependencies, workspace round trips, and downloaded checksums before publication.
+CI runs the native suite across Linux, Windows, Intel macOS, and Apple Silicon macOS, plus Linux sanitizers, complexity checks, and workflow lint. Release gates verify packaged startup, dependencies, workspace round trips, and downloaded checksums before publication.
 
 ## Documentation and contributing
 
@@ -141,6 +142,7 @@ CI runs 17 native suites across Linux, Windows, Intel macOS, and Apple Silicon m
 | [Getting started](docs/getting-started.md) | Samples, first launch, project tabs, filters, and custom colors |
 | [Installation and packaging](docs/packaging.md) | Platform requirements, unsigned installation, source builds, and release verification |
 | [Workspace format v1](docs/workspace-format-v1.md) | Persisted fields, safe external edits, attachment paths, and archive rules |
+| [mdbase transfer v1](docs/mdbase-transfer-v1.md) | Export profile, import mappings, preserved data, safety, and current limitations |
 | [Development](docs/development.md) | Tooling, native tests, sanitizers, and complexity gates |
 | [Contributing](CONTRIBUTING.md) | Bug reports, changes, and validation |
 | [Website maintenance](docs/website.md) | Static site build, screenshots, and GitHub Pages deployment |

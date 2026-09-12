@@ -53,6 +53,31 @@ std::optional<Priority> json_priority(const QJsonObject& object, const char* key
     return text.isEmpty() || !parse_priority(text.toStdString(), value) ? std::nullopt : std::optional<Priority>(value);
 }
 
+std::string json_view_layout(const QJsonObject& object) {
+    const auto layout = object.value("layout").toString("list").toStdString();
+    return layout == "table" ? "table" : "list";
+}
+
+std::vector<int> json_hidden_columns(const QJsonObject& object) {
+    std::vector<int> columns;
+    for (const auto& value : object.value("hidden_columns").toArray()) {
+        if (!value.isDouble()) continue;
+        const auto column = value.toInt();
+        if (column < 1 || column > 5 || value.toDouble() != static_cast<double>(column)) continue;
+        if (std::find(columns.begin(), columns.end(), column) == columns.end()) columns.push_back(column);
+    }
+    return columns;
+}
+
+std::vector<std::string> json_expanded_task_ids(const QJsonObject& object) {
+    std::vector<std::string> ids;
+    for (const auto& value : object.value("expanded_task_ids").toArray()) {
+        const auto id = value.toString().toStdString();
+        if (!id.empty()) ids.push_back(id);
+    }
+    return ids;
+}
+
 bool load_saved_views(const QJsonArray& values, std::vector<SavedView>& output, std::string& error) {
     for (const auto& value : values) {
         const auto object = value.toObject();
@@ -63,6 +88,10 @@ bool load_saved_views(const QJsonArray& values, std::vector<SavedView>& output, 
             error = "invalid saved view sort";
             return false;
         }
+        view.layout = json_view_layout(object);
+        view.hidden_columns = json_hidden_columns(object);
+        view.expanded_task_ids = json_expanded_task_ids(object);
+        view.expansion_initialized = object.value("expansion_initialized").toBool(object.contains("expanded_task_ids"));
         if (!view.name.empty()) output.push_back(std::move(view));
     }
     return true;
@@ -77,6 +106,10 @@ bool load_open_view_tabs(const QJsonArray& values, std::vector<OpenViewTab>& out
         tab.selected_task_id = object.value("selected_task_id").toString().toStdString();
         tab.scroll_value = object.value("scroll_value").toInt();
         tab.all_tasks = object.value("all_tasks").toBool();
+        tab.layout = json_view_layout(object);
+        tab.hidden_columns = json_hidden_columns(object);
+        tab.expanded_task_ids = json_expanded_task_ids(object);
+        tab.expansion_initialized = object.value("expansion_initialized").toBool(false);
         if (!parse_task_sort(object.value("sort").toString("manual").toStdString(), tab.sort)) {
             error = "invalid open view tab sort";
             return false;
@@ -152,6 +185,18 @@ QJsonArray save_view_tabs(const std::vector<OpenViewTab>& tabs) {
         object["selected_task_id"] = QString::fromStdString(tab.selected_task_id);
         object["scroll_value"] = tab.scroll_value;
         object["all_tasks"] = tab.all_tasks;
+        object["layout"] = QString::fromStdString(tab.layout == "table" ? "table" : "list");
+        QJsonArray hidden_columns;
+        for (const auto column : tab.hidden_columns) {
+            if (column >= 1 && column <= 5) hidden_columns.append(column);
+        }
+        object["hidden_columns"] = hidden_columns;
+        QJsonArray expanded_task_ids;
+        for (const auto& id : tab.expanded_task_ids) {
+            if (!id.empty()) expanded_task_ids.append(QString::fromStdString(id));
+        }
+        object["expanded_task_ids"] = expanded_task_ids;
+        object["expansion_initialized"] = tab.expansion_initialized;
         values.append(object);
     }
     return values;
@@ -202,6 +247,18 @@ QJsonArray save_views(const std::vector<SavedView>& views) {
         object["name"] = QString::fromStdString(view.name);
         object["filter_expression"] = QString::fromStdString(view.filter_expression);
         object["sort"] = QString::fromStdString(to_string(view.sort));
+        object["layout"] = QString::fromStdString(view.layout == "table" ? "table" : "list");
+        QJsonArray hidden_columns;
+        for (const auto column : view.hidden_columns) {
+            if (column >= 1 && column <= 5) hidden_columns.append(column);
+        }
+        object["hidden_columns"] = hidden_columns;
+        QJsonArray expanded_task_ids;
+        for (const auto& id : view.expanded_task_ids) {
+            if (!id.empty()) expanded_task_ids.append(QString::fromStdString(id));
+        }
+        object["expanded_task_ids"] = expanded_task_ids;
+        object["expansion_initialized"] = view.expansion_initialized;
         values.append(object);
     }
     return values;
@@ -246,6 +303,8 @@ SettingsResult load_settings(const std::filesystem::path& path) {
     settings.window_width = std::max(900, object.value("window_width").toInt(1280));
     settings.window_height = std::max(600, object.value("window_height").toInt(820));
     settings.task_pane_width = std::max(300, object.value("task_pane_width").toInt(500));
+    settings.details_visible = object.value("details_visible").toBool(true);
+    settings.details_pane_width = std::max(360, object.value("details_pane_width").toInt(600));
     settings.toolbar_visible = object.value("toolbar_visible").toBool(true);
     settings.active_view_tab = std::max(0, object.value("active_view_tab").toInt(0));
     for (const auto& value : object.value("delivered_reminder_keys").toArray()) {
@@ -284,6 +343,8 @@ QJsonObject recognized_settings(const Settings& settings) {
     object["window_width"] = settings.window_width;
     object["window_height"] = settings.window_height;
     object["task_pane_width"] = settings.task_pane_width;
+    object["details_visible"] = settings.details_visible;
+    object["details_pane_width"] = std::max(360, settings.details_pane_width);
     object["toolbar_visible"] = settings.toolbar_visible;
     object["active_view_tab"] = settings.active_view_tab;
     QJsonArray delivered_keys;

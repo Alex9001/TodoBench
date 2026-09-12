@@ -5,6 +5,17 @@
 
 namespace todobench {
 namespace {
+std::filesystem::path workspace_destination(const std::filesystem::path& root) {
+    auto destination = std::filesystem::absolute(root);
+    // A trailing separator or "/." makes parent_path() point inside the chosen
+    // folder. Remove those components so staging remains beside the workspace.
+    while (destination != destination.root_path()
+           && (destination.filename().empty() || destination.filename() == ".")) {
+        destination = destination.parent_path();
+    }
+    return destination;
+}
+
 void ensure_empty_destination(const std::filesystem::path& root) {
     if (std::filesystem::is_symlink(root)) throw std::runtime_error("workspace path must not be a symbolic link");
     if (!std::filesystem::exists(root)) return;
@@ -32,7 +43,7 @@ void publish(const std::filesystem::path& staging, const std::filesystem::path& 
 SaveResult create_staged_workspace(const std::filesystem::path& root,
     const std::function<void(const std::filesystem::path&)>& populate) {
     try {
-        const auto destination = std::filesystem::absolute(root);
+        const auto destination = workspace_destination(root);
         ensure_empty_destination(destination);
         std::filesystem::create_directories(destination.parent_path());
         QTemporaryDir staging(QString::fromStdString((destination.parent_path() / ".todobench-new-XXXXXX").string()));

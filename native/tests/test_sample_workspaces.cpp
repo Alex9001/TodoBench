@@ -46,6 +46,14 @@ bool valid_sample_tasks(const WorkspaceSnapshot& snapshot) {
     }
     return true;
 }
+
+bool no_staging_directories(const std::filesystem::path& parent) {
+    if (!std::filesystem::exists(parent)) return true;
+    for (const auto& entry : std::filesystem::directory_iterator(parent)) {
+        if (entry.path().filename().string().starts_with(".todobench-new-")) return false;
+    }
+    return true;
+}
 }
 class SampleWorkspacesTest final : public QObject {
     Q_OBJECT
@@ -57,6 +65,8 @@ private slots:
     void unknownWorkflowLeavesNoFiles();
     void advancedSampleRoundTripsArchive();
     void repeatedSamplesHaveIndependentIds();
+    void createsAtEquivalentEmptyDestinations_data();
+    void createsAtEquivalentEmptyDestinations();
 };
 bool sample_branding_is_valid(const QJsonObject& sample) {
     if (sample.value("name").toString().contains("CYBER BRAND")) return false;
@@ -141,6 +151,43 @@ void SampleWorkspacesTest::repeatedSamplesHaveIndependentIds() {
     const auto one = WorkspaceScanner{}.scan(parent / "one");
     const auto two = WorkspaceScanner{}.scan(parent / "two");
     for (const auto& [id, task] : one.tasks) QVERIFY(!two.tasks.contains(id));
+}
+
+void SampleWorkspacesTest::createsAtEquivalentEmptyDestinations_data() {
+    QTest::addColumn<QString>("workflow");
+    QTest::addColumn<bool>("existing");
+    QTest::addColumn<QString>("suffix");
+    QTest::addColumn<int>("task_count");
+    for (const auto& workflow : {QString("blank"), QString("simple")}) {
+        const auto count = workflow == "blank" ? 0 : 7;
+        for (const auto existing : {false, true}) {
+            for (const auto& suffix : {QString("/"), QString("/.")}) {
+                const auto name = QString("%1-%2-%3").arg(workflow, existing ? "existing" : "new", suffix == "/" ? "slash" : "dot");
+                QTest::newRow(name.toUtf8().constData()) << workflow << existing << suffix << count;
+            }
+        }
+    }
+}
+
+void SampleWorkspacesTest::createsAtEquivalentEmptyDestinations() {
+    QFETCH(QString, workflow);
+    QFETCH(bool, existing);
+    QFETCH(QString, suffix);
+    QFETCH(int, task_count);
+    QTemporaryDir temporary;
+    QVERIFY(temporary.isValid());
+    const auto parent = std::filesystem::path(temporary.path().toStdString());
+    const auto target = parent / "workspace";
+    if (existing) QVERIFY(std::filesystem::create_directory(target));
+    const auto destination = std::filesystem::path(target.string() + suffix.toStdString());
+    const auto result = create_sample_workspace(destination, {"Equivalent", workflow.toStdString()});
+    QCOMPARE(result.status, SaveStatus::Saved);
+    const auto snapshot = WorkspaceScanner{}.scan(target);
+    QCOMPARE(snapshot.tasks.size(), static_cast<size_t>(task_count));
+    QVERIFY(snapshot.diagnostics.empty());
+    QVERIFY(std::filesystem::exists(target / "settings.json"));
+    QVERIFY(no_staging_directories(parent));
+    QVERIFY(no_staging_directories(target));
 }
 QTEST_GUILESS_MAIN(SampleWorkspacesTest)
 #include "test_sample_workspaces.moc"

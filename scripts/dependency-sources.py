@@ -113,6 +113,58 @@ def macos_sources(stage):
     return records
 
 
+def rust_sources(stage):
+    """Capture the exact Rust inputs used by the mdbase bridge.
+
+    The bridge is statically linked, so its Rust crates are not discoverable
+    from the platform package's shared-library scan.  Keep a locked Cargo
+    manifest, Cargo's complete vendored registry, and the local mdbase-rs
+    source in the dependency archive.  The generated metadata makes the
+    license and source identity of every locked crate auditable without
+    requiring Cargo to be installed.
+    """
+    bridge = Path('native/mdbase_bridge').resolve()
+    rust_stage = stage / 'rust'
+    rust_stage.mkdir(parents=True, exist_ok=True)
+    for name in ('Cargo.toml', 'Cargo.lock', 'rust-toolchain.toml'):
+        shutil.copy2(bridge / name, rust_stage / name)
+    (rust_stage / 'mdbase-rs-revision.txt').write_text(
+        (bridge / 'vendor' / 'MDBASE_RS_REVISION').read_text())
+    (rust_stage / 'mdbase-spec-revision.txt').write_text(
+        (bridge / 'vendor' / 'MDBASE_SPEC_REVISION').read_text())
+    shutil.copytree(bridge / 'vendor' / 'mdbase-rs', rust_stage / 'mdbase-rs')
+
+    vendor = rust_stage / 'registry'
+    cargo = os.environ.get('CARGO', 'cargo')
+    cargo_prefix = [cargo]
+    # The release build pins the toolchain in rust-toolchain.toml.  rustup's
+    # explicit selector is portable across the CI hosts; installations that
+    # use a direct cargo binary simply omit the selector.
+    if shutil.which('rustup'):
+        cargo_prefix = [cargo, '+1.94.0']
+    subprocess.run(cargo_prefix + ['vendor', '--manifest-path', str(bridge / 'Cargo.toml'),
+                                   '--locked', '--versioned-dirs', '--quiet', str(vendor)], check=True)
+    (rust_stage / 'cargo-config.toml').write_text(
+        '[source.crates-io]\n'
+        'replace-with = "vendored-sources"\n\n'
+        '[source.vendored-sources]\n'
+        'directory = "registry"\n')
+    metadata = json.loads(output(*(cargo_prefix + ['metadata', '--manifest-path',
+                                                    str(bridge / 'Cargo.toml'),
+                                                    '--locked', '--format-version', '1'])))
+    packages = []
+    for package in metadata['packages']:
+        packages.append({key: package.get(key) for key in
+                         ('name', 'version', 'id', 'license', 'license_file',
+                          'source', 'repository', 'homepage')})
+    (rust_stage / 'dependencies.json').write_text(json.dumps({
+        'toolchain': '1.94.0',
+        'manifest': 'Cargo.toml',
+        'lockfile': 'Cargo.lock',
+        'packages': packages,
+    }, indent=2) + '\n')
+
+
 def main():
     destination = Path(sys.argv[1]).resolve()
     name = 'TodoBench-' + output(sys.executable, 'scripts/version.py') + '-' + os.environ['RELEASE_PLATFORM'] + '-dependency-source'
@@ -128,6 +180,7 @@ def main():
         windows_sources(stage)
     else:
         records.extend(macos_sources(stage))
+    rust_sources(stage)
     provenance = {'commit': output('git', 'rev-parse', 'HEAD'), 'platform': platform.platform(),
                   'cmake': output('cmake', '--version'), 'qt': '6.8.3', 'downloads': records}
     (stage / 'provenance.json').write_text(json.dumps(provenance, indent=2) + '\n')

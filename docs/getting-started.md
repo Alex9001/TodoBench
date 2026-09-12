@@ -29,6 +29,22 @@ TodoBench remembers the last successfully opened folder and reopens it on launch
 
 Click **Open tab…** beside the task tabs to choose a project or saved view. Closing a tab leaves its project and tasks intact, so it remains available in this menu. Open views have a checkmark; selecting one switches to its tab. Nested projects show their full path. **Custom view…** opens the advanced tab dialog.
 
+## Tasks, layouts, and details
+
+Each tab starts in **List**, with a completion control beside the task title and metadata underneath. The disclosure arrow expands subtasks; **Space** completes or reopens the current task. Use the row's **…** menu, right-click, or **Shift+F10** for status, move, duplicate, subtask, and trash commands. **Status** offers all five states; completing a repeating task or a task with unfinished subtasks uses the same behavior from every entry point.
+
+Use the active tab's header for **Add task**, **Filter**, **Sort**, **List / Table**, and **Show / Hide details**. Table keeps comparison columns, with **Columns** choosing which metadata to show. Switching layouts retains selection, filters, sorting, and expanded subtasks. Multiple selection reveals the supported bulk action above the list. These choices and the details pane width are remembered with the workspace.
+
+The task title is editable at the top of details. Project and parent links navigate above it; property controls open their pickers nearby. Notes retain **Visual**, **Source**, and **History**, with save feedback beside the editor. **Subtasks** and **Attachments** show counts and their own Add controls. Activate an item with **Enter** or a double-click; attachment menus offer Open, Copy Markdown link, and Open containing folder.
+
+Closing details keeps it closed as you select other tasks. **Enter**, a double-click on a task title, or **Show details** opens it again. Workspace commands remain in the workspace toolbar and **File** menu; settings, appearance, keyboard preferences, and help remain in the application menus.
+
+## Convert to and from mdbase
+
+Use **File → Export as mdbase…** to convert the open workspace into a new mdbase v0.3 collection folder. Choose a path that does not exist and is outside the workspace. The dialog calculates attachment and source-size estimates in the background. TodoBench saves pending edits first, preserves supporting files, validates the completed collection, and publishes it only after validation succeeds.
+
+Use **File → Import from mdbase…** with or without another workspace open. Choose a v0.3 collection, select its types and individual records, map its fields plus every observed status and priority, review the exact result, and choose a new workspace folder. The source scan runs in the background and can be cancelled. Per-record project and parent choices resolve relationship conflicts in the review. Import never merges into an existing folder. The source collection is retained byte-for-byte under the new workspace's import provenance. See [mdbase transfer v1](mdbase-transfer-v1.md) for the complete mapping and preservation rules.
+
 ## Readable project filters
 
 Project tabs and saved views show names in the search box, for example `project:Tutorial` or `project:"Tutorial / Launch example"`. Edit these names alongside title words and tags. Nested projects use their full path, and identical paths receive a numbered suffix. Saved filters retain internal project IDs so a rename preserves their scope. A deleted project's filter reads “Missing project” and continues to match no tasks.

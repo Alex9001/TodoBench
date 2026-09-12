@@ -7,6 +7,9 @@ recipes, and provenance for the specific native build.
 
 | Component | License | Use |
 | --- | --- | --- |
+| mdbase-rs 0.4.0-rc.4 (vendored at `native/mdbase_bridge/vendor/mdbase-rs`, pin `ca71ae`) + mdbase spec 0.3.0 (`68b9a9`) | MIT (spec CC-BY-4.0 where applicable) | Offline local mdbase collection core for TodoBench transfer (TodoBench links the compiled staticlib; spec text not copied) |
+| Rust crates locked in `native/mdbase_bridge/Cargo.lock` | Each crate's declared license | Statically linked mdbase bridge dependencies; dependency-source archives include the locked manifest, complete vendored registry, local mdbase-rs source, and `rust/dependencies.json` with package source and license metadata |
+| @callumalpass/mdbase 0.3.0-rc.5 (vendored independent oracle at `native/mdbase_oracle/ts`, pin `885c4f`) | MIT | Development-only independent mdbase verification engine for CTest `mdbase_oracle_interop` (not shipped/bundled) |
 | Qt 6.8.3 (qtbase, qtsvg) | LGPL-3.0 / GPL-3.0 with applicable exceptions | Dynamically linked UI and SVG rendering |
 | ICU 73.2 (Qt Linux SDK) | Unicode / ICU terms in bundled license | Unicode support |
 | yaml-cpp | MIT | YAML front matter |

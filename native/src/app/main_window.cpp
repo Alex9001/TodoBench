@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "app/icons.h"
 #include "app/main_window.h"
+#include "app/task_presentation.h"
 #include "app/theme.h"
 #include <QActionGroup>
 #include "app/onboarding_wizard.h"
+#include "app/mdbase_transfer_wizard.h"
 #include "app/settings_dialog.h"
 #include "app/task_schedule_editor.h"
 #include "storage/attachment_store.h"
@@ -32,9 +34,8 @@
 #include <QMouseEvent>
 #include <QSignalBlocker>
 #include <QCloseEvent>
-#include <QCheckBox>
+#include <QCalendarWidget>
 #include <QDate>
-#include <QDateEdit>
 #include <QDateTime>
 #include <QDialog>
 #include <QDialogButtonBox>
@@ -81,7 +82,30 @@
 namespace todobench {
 namespace {
 
-constexpr int TaskIdRole = Qt::UserRole + 1;
+const TaskRecord* find_task(const WorkspaceSnapshot& snapshot, const std::string& id) {
+    const auto found = snapshot.tasks.find(id);
+    return found == snapshot.tasks.end() ? nullptr : &found->second;
+}
+
+void set_transfer_actions_enabled(QAction* export_action, QAction* import_action,
+                                  bool export_enabled, bool transfer_running) {
+    if (export_action != nullptr) export_action->setEnabled(export_enabled && !transfer_running);
+    if (import_action != nullptr) import_action->setEnabled(!transfer_running);
+}
+
+QString display_path(const std::filesystem::path& path) {
+#if defined(Q_OS_WIN)
+    return QString::fromStdWString(path.native());
+#else
+    const auto bytes = path.u8string();
+    return QString::fromUtf8(reinterpret_cast<const char*>(bytes.data()),
+                             static_cast<qsizetype>(bytes.size()));
+#endif
+}
+
+bool has_recurrence(const TaskRecord* task) {
+    return task != nullptr && recurrence_enabled(task->recurrence_yaml);
+}
 
 QString status_label(TaskStatus status) {
     switch (status) {
@@ -120,17 +144,6 @@ QString priority_label(Priority priority) {
     return "Normal";
 }
 
-QColor status_color(TaskStatus status) {
-    switch (status) {
-    case TaskStatus::Todo: return QColor("#78909c");
-    case TaskStatus::InProgress: return QColor("#1976d2");
-    case TaskStatus::Waiting: return QColor("#ed6c02");
-    case TaskStatus::Done: return QColor("#2e7d32");
-    case TaskStatus::Cancelled: return QColor("#757575");
-    }
-    return {};
-}
-
 QString project_name(const WorkspaceSnapshot& snapshot, const std::string& project_id) {
     const auto found = snapshot.projects.find(project_id);
     if (found == snapshot.projects.end()) return QString::fromStdString(project_id);
@@ -148,6 +161,17 @@ QString project_path_label(const WorkspaceSnapshot& snapshot, const std::string&
         current = found->second.parent_id;
     }
     return names.isEmpty() ? QString::fromStdString(project_id) : names.join(" / ");
+}
+
+QString task_navigation(const WorkspaceSnapshot& snapshot, const TaskRecord& task) {
+    QString navigation = QString("<a href=\"project:%1\">%2</a>")
+        .arg(QString::fromStdString(task.project_id), project_path_label(snapshot, task.project_id).toHtmlEscaped());
+    const auto parent = snapshot.tasks.find(task.parent_id);
+    if (parent != snapshot.tasks.end()) {
+        navigation += QString(" / <a href=\"task:%1\">%2</a>")
+            .arg(QString::fromStdString(parent->first), QString::fromStdString(parent->second.title).toHtmlEscaped());
+    }
+    return navigation;
 }
 
 std::vector<std::pair<std::string, QString>> active_project_choices(const WorkspaceSnapshot& snapshot) {
@@ -182,53 +206,6 @@ QTimeZone workspace_timezone(const Settings& settings) {
     return requested.isValid() ? requested : QTimeZone::systemTimeZone();
 }
 
-QList<QStandardItem*> make_task_row(const TaskRecord& task, const Settings& settings, const WorkspaceSnapshot& snapshot) {
-    auto* title = new QStandardItem(QString::fromStdString(task.title));
-    title->setFlags(title->flags() | Qt::ItemIsDragEnabled | Qt::ItemIsDropEnabled);
-    const auto appearance = evaluate_formatting_rules(task, settings.formatting_rules, QDate::currentDate());
-    if (appearance.foreground) title->setForeground(QColor(QString::fromStdString(*appearance.foreground)));
-    if (appearance.background) title->setBackground(QColor(QString::fromStdString(*appearance.background)));
-    auto font = title->font();
-    if (appearance.bold) font.setBold(*appearance.bold);
-    if (appearance.italic) font.setItalic(*appearance.italic);
-    if (appearance.strikethrough) font.setStrikeOut(*appearance.strikethrough);
-    title->setFont(font);
-    const auto icon = settings.project_icons.find(task.project_id);
-    if (icon != settings.project_icons.end() && !icon->second.empty()) {
-        title->setIcon(QIcon(QString::fromStdString(icon->second)));
-    }
-    auto* state = new QStandardItem("●  " + status_label(task.status));
-    state->setForeground(status_color(task.status));
-    auto* tags = new QStandardItem(tags_label(task.tags));
-    for (const auto& tag : task.tags) {
-        const auto color = settings.tag_colors.find(tag);
-        if (color == settings.tag_colors.end()) continue;
-        const QColor background(QString::fromStdString(color->second));
-        if (!background.isValid()) continue;
-        tags->setBackground(background);
-        tags->setForeground(background.lightness() < 128 ? Qt::white : Qt::black);
-        break;
-    }
-    QList<QStandardItem*> row{title, state, new QStandardItem(priority_label(task.priority)),
-            new QStandardItem(QDate::fromString(QString::fromStdString(task.due_yaml), Qt::ISODate).toString(Qt::ISODate)),
-            tags, new QStandardItem(project_name(snapshot, task.project_id))};
-    const auto id = QString::fromStdString(task.id);
-    for (auto* item : row) item->setData(id, TaskIdRole);
-    return row;
-}
-
-void append_task_tree(QStandardItem* parent, const std::string& parent_id,
-                      const std::unordered_map<std::string, std::vector<const TaskRecord*>>& children,
-                      const Settings& settings, const WorkspaceSnapshot& snapshot) {
-    const auto found = children.find(parent_id);
-    if (found == children.end()) return;
-    for (const auto* task : found->second) {
-        const auto row = make_task_row(*task, settings, snapshot);
-        parent->appendRow(row);
-        append_task_tree(row.front(), task->id, children, settings, snapshot);
-    }
-}
-
 std::vector<TaskRecord> siblings_for(const WorkspaceSnapshot& snapshot, const std::string& project_id,
                                      const std::string& parent_id, const std::string& excluded_id) {
     std::vector<TaskRecord> siblings;
@@ -255,6 +232,11 @@ bool should_keep_editor_notes(const std::string& current_id, const std::string& 
     return editor->is_dirty() || editor->markdown() == body;
 }
 
+bool keep_detail_draft(const std::string& current_id, const TaskRecord& target,
+                       const std::string& shown_hash, bool unsaved) {
+    return current_id == target.id && target.source_hash == shown_hash && unsaved;
+}
+
 std::string yaml_or_blank(const std::string& value, const char* blank) {
     return (value.empty() || value == blank) ? std::string(blank) : value;
 }
@@ -268,9 +250,9 @@ bool editor_identity_matches(const TaskRecord& task, const QLineEdit* title, con
     return priority->currentText() == priority_label(task.priority);
 }
 
-bool editor_schedule_matches(const TaskRecord& task, bool due_enabled, const QDate& due,
+bool editor_schedule_matches(const TaskRecord& task, const QDate& due,
                              const std::string& recurrence, const std::string& reminders) {
-    const auto due_text = due_enabled ? due.toString(Qt::ISODate).toStdString() : std::string("null");
+    const auto due_text = due.isValid() ? due.toString(Qt::ISODate).toStdString() : std::string("null");
     if (due_text != yaml_or_blank(task.due_yaml, "null")) return false;
     if (yaml_or_blank(recurrence, "null") != yaml_or_blank(task.recurrence_yaml, "null")) return false;
     return yaml_or_blank(reminders, "[]") == yaml_or_blank(task.reminders_yaml, "[]");
@@ -289,50 +271,62 @@ std::optional<bool> ask_complete_branch(QWidget* parent, int unfinished) {
     return box.clickedButton() == branch;
 }
 
-class TaskTreeView final : public QTreeView {
-public:
-    using DropHandler = std::function<bool(const QModelIndex&, const QModelIndex&, int)>;
-
-    explicit TaskTreeView(QWidget* parent = nullptr) : QTreeView(parent) {}
-    DropHandler drop_handler;
-
-protected:
-    void mousePressEvent(QMouseEvent* event) override {
-        press_pos_ = event->position().toPoint();
-        press_index_ = indexAt(press_pos_);
-        QTreeView::mousePressEvent(event);
+void visit_task_indexes(QAbstractItemModel* model, const QModelIndex& parent,
+                        const std::function<void(const QModelIndex&)>& visitor) {
+    for (int row = 0; row < model->rowCount(parent); ++row) {
+        const auto index = model->index(row, 0, parent);
+        visitor(index);
+        visit_task_indexes(model, index, visitor);
     }
+}
 
-    void mouseMoveEvent(QMouseEvent* event) override {
-        if ((event->buttons() & Qt::LeftButton) && dragEnabled() && press_index_.isValid()) {
-            const auto distance = (event->position().toPoint() - press_pos_).manhattanLength();
-            if (distance < QApplication::startDragDistance() * 2) return;
-        }
-        QTreeView::mouseMoveEvent(event);
+std::unordered_set<std::string> selected_task_ids(QTreeView* tree) {
+    std::unordered_set<std::string> ids;
+    for (const auto& index : tree->selectionModel()->selectedRows()) {
+        ids.insert(index.data(TaskIdRole).toString().toStdString());
     }
+    return ids;
+}
 
-    void startDrag(Qt::DropActions actions) override {
-        drag_source_ = press_index_.isValid() ? press_index_ : currentIndex();
-        QTreeView::startDrag(actions);
-    }
+void synchronize_task_selection(QTreeView* tree, const std::string& task_id) {
+    const auto id = QString::fromStdString(task_id);
+    if (tree->currentIndex().data(TaskIdRole).toString() == id) return;
+    const auto matches = tree->model()->match(tree->model()->index(0, 0), TaskIdRole, id, 1,
+                                             Qt::MatchExactly | Qt::MatchRecursive);
+    QSignalBlocker blocker(tree->selectionModel());
+    tree->setCurrentIndex(matches.empty() ? QModelIndex{} : matches.front());
+    if (matches.empty()) tree->clearSelection();
+}
 
-    void dropEvent(QDropEvent* event) override {
-        if (event->source() != this || !drop_handler) {
-            event->ignore();
-            return;
-        }
-        const auto accepted = drop_handler(drag_source_, indexAt(event->position().toPoint()),
-                                           static_cast<int>(dropIndicatorPosition()));
-        drag_source_ = QModelIndex();
-        if (accepted) event->acceptProposedAction();
-        else event->ignore();
-    }
+void restore_task_rows(QTreeView* tree, OpenViewTab& view, const std::unordered_set<std::string>& selection,
+                       const std::string& current) {
+    const std::unordered_set<std::string> expanded(view.expanded_task_ids.begin(), view.expanded_task_ids.end());
+    visit_task_indexes(tree->model(), {}, [&](const QModelIndex& index) {
+        const auto id = index.data(TaskIdRole).toString().toStdString();
+        const bool open = !view.expansion_initialized || expanded.contains(id);
+        tree->setExpanded(index, open);
+        if (!view.expansion_initialized && tree->model()->hasChildren(index)) view.expanded_task_ids.push_back(id);
+        if (id == current) tree->selectionModel()->setCurrentIndex(index, QItemSelectionModel::NoUpdate);
+        if (selection.contains(id)) tree->selectionModel()->select(index, QItemSelectionModel::Select | QItemSelectionModel::Rows);
+    });
+    view.expansion_initialized = true;
+}
 
-private:
-    QModelIndex drag_source_;
-    QModelIndex press_index_;
-    QPoint press_pos_;
-};
+template <typename Value>
+bool same_members(const std::vector<Value>& left, const std::vector<Value>& right) {
+    return std::unordered_set<Value>(left.begin(), left.end()) == std::unordered_set<Value>(right.begin(), right.end());
+}
+
+bool same_view_tab(const OpenViewTab& open, const OpenViewTab& requested, const bool match_presentation) {
+    if (open.all_tasks || requested.all_tasks) return open.all_tasks == requested.all_tasks;
+    if (open.filter_expression != requested.filter_expression || open.sort != requested.sort) return false;
+    if (!match_presentation) return true;
+    if (open.layout != requested.layout || !same_members(open.hidden_columns, requested.hidden_columns)) return false;
+    // A legacy/default template has no saved expansion preference. Opening it
+    // initializes the live tab, which must still match on subsequent requests.
+    return !requested.expansion_initialized
+        || (open.expansion_initialized && same_members(open.expanded_task_ids, requested.expanded_task_ids));
+}
 
 }  // namespace
 
@@ -377,7 +371,13 @@ void MainWindow::create_actions() {
     auto* refresh = file_menu->addAction("&Refresh");
     auto* export_archive = file_menu->addAction("Export Workspace (.7z)...");
     auto* import_archive = file_menu->addAction("Import Workspace (.7z)...");
+    auto* export_mdbase = file_menu->addAction("Export as mdbase...");
+    export_mdbase->setObjectName("exportMdbase");
+    auto* import_mdbase = file_menu->addAction("Import from mdbase...");
+    import_mdbase->setObjectName("importMdbase");
     auto* open_folder = file_menu->addAction("Open Workspace &Folder");
+    export_mdbase_action_ = export_mdbase;
+    import_mdbase_action_ = import_mdbase;
     file_menu->addSeparator();
     auto* quit = file_menu->addAction("&Quit");
     auto* edit_menu = menuBar()->addMenu("&Edit");
@@ -393,6 +393,7 @@ void MainWindow::create_actions() {
     auto* open_view = saved_view_menu->addAction("Open Saved View...");
     auto* delete_view = saved_view_menu->addAction("Delete Saved View...");
     auto* sort_menu = view_menu->addMenu("Sort");
+    sort_menu_ = sort_menu;
     auto* sort_manual = sort_menu->addAction("Manual");
     auto* sort_title = sort_menu->addAction("Title");
     auto* sort_priority = sort_menu->addAction("Priority");
@@ -448,6 +449,7 @@ void MainWindow::create_actions() {
     save_action_ = save;
     settings_action_ = settings_action;
     attach_action_ = attach;
+    bulk_wait_action_ = bulk_waiting;
     new_task->setShortcut(QKeySequence("Ctrl+N"));
     new_subtask->setShortcut(QKeySequence("Ctrl+Alt+N"));
     duplicate->setShortcut(QKeySequence("Ctrl+D"));
@@ -461,9 +463,11 @@ void MainWindow::create_actions() {
     close_view->setShortcut(QKeySequence("Ctrl+W"));
     connect(new_workspace, &QAction::triggered, this, [this] { choose_workspace(true); });
     connect(open_workspace, &QAction::triggered, this, [this] { choose_workspace(false); });
-    connect(refresh, &QAction::triggered, this, [this] { std::string error; if (!controller_.refresh(error)) QMessageBox::warning(this, "Refresh failed", QString::fromStdString(error)); else refresh_view(); });
+    connect(refresh, &QAction::triggered, this, [this] { if (!flush_pending_edits()) return; std::string error; if (!controller_.refresh(error)) QMessageBox::warning(this, "Refresh failed", QString::fromStdString(error)); else { select_task(current_task_id_); refresh_view(); } });
     connect(export_archive, &QAction::triggered, this, [this] { export_workspace_archive(); });
     connect(import_archive, &QAction::triggered, this, [this] { import_workspace_archive(); });
+    connect(export_mdbase, &QAction::triggered, this, [this] { export_as_mdbase(); });
+    connect(import_mdbase, &QAction::triggered, this, [this] { import_from_mdbase(); });
     connect(open_folder, &QAction::triggered, this, [this] { open_workspace_folder(); });
     connect(undo_trash_action, &QAction::triggered, this, [this] { undo_trash(); });
     connect(find_action, &QAction::triggered, this, [this] { find_in_context(); });
@@ -483,9 +487,10 @@ void MainWindow::create_actions() {
     connect(restore, &QAction::triggered, this, [this] { restore_task(); });
     connect(snooze, &QAction::triggered, this, [this] { snooze_reminder(); });
     connect(undo_completion, &QAction::triggered, this, [this] {
+        if (read_only_ || !flush_pending_edits()) return;
         std::string error;
         if (!controller_.undo_last_completion(error)) QMessageBox::information(this, "Undo completion", QString::fromStdString(error));
-        else { refresh_view(); statusBar()->showMessage("Completion undone"); }
+        else { select_task(current_task_id_); refresh_view(); statusBar()->showMessage("Completion undone"); }
     });
     connect(attach, &QAction::triggered, this, [this] { import_attachment(); });
     connect(clear_filters, &QAction::triggered, this, [this] { clear_filter(); });
@@ -518,6 +523,8 @@ void MainWindow::create_actions() {
     set_action_icon(duplicate, "copy");
     set_action_icon(export_archive, "upload");
     set_action_icon(import_archive, "download");
+    set_action_icon(export_mdbase, "upload");
+    set_action_icon(import_mdbase, "download");
     set_action_icon(open_folder, "folder-open");
     set_action_icon(quit, "log-out");
     set_action_icon(undo_trash_action, "undo-2");
@@ -550,31 +557,12 @@ void MainWindow::create_actions() {
     set_action_icon(refresh, "refresh-cw");
     set_action_icon(attach, "paperclip");
     set_action_icon(settings_action, "settings");
-    primary_toolbar_ = addToolBar("Task actions");
+    primary_toolbar_ = addToolBar("Workspace");
     primary_toolbar_->setObjectName("TaskActions");
     primary_toolbar_->setMovable(false);
-    primary_toolbar_->setIconSize(QSize(20, 20));
-    primary_toolbar_->setToolButtonStyle(Qt::ToolButtonIconOnly);
-    const auto add_primary = [this](QAction* action) {
-        auto* button = new QToolButton(primary_toolbar_);
-        button->setDefaultAction(action);
-        button->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
-        button->setMinimumWidth(108);
-        button->setMinimumHeight(36);
-        button->setAutoRaise(false);
-        primary_toolbar_->addWidget(button);
-    };
-    add_primary(open_workspace);
-    add_primary(new_task);
-    add_primary(complete);
-    add_primary(move_task);
-    add_primary(trash);
-    primary_toolbar_->addSeparator();
-    primary_toolbar_->addAction(new_subtask);
-    primary_toolbar_->addAction(save);
-    primary_toolbar_->addAction(attach);
-    primary_toolbar_->addAction(refresh);
-    primary_toolbar_->addAction(settings_action);
+    primary_toolbar_->setIconSize(QSize(18, 18));
+    primary_toolbar_->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+    for (auto* action : {new_workspace, open_workspace, refresh, open_folder}) primary_toolbar_->addAction(action);
     new_subtask->setToolTip("New subtask");
     save->setToolTip("Save task");
     attach->setToolTip("Add attachment");
@@ -608,13 +596,18 @@ void MainWindow::create_layout() {
     view_tabs_->addTab("All Tasks");
     view_tabs_->setTabData(0, false);
     task_layout->addWidget(create_tab_controls(task_pane));
+    task_layout->addWidget(create_task_header(task_pane));
     auto* filter_layout = new QHBoxLayout;
     filter_edit_ = new QLineEdit(task_pane);
     filter_edit_->setObjectName("taskFilter");
+    filter_edit_->setAccessibleName("Filter tasks");
     filter_edit_->setClearButtonEnabled(true);
     filter_edit_->setPlaceholderText("Filter tasks: words, tag:x, project:x, status:todo…");
     filter_edit_->setToolTip("Filters update instantly. Combine title words with tag:, project:, status:, priority:, due_from:, or due_to:.");
-    auto* clear_filter_button = new QPushButton("Clear", task_pane);
+    auto* clear_filter_button = new QToolButton(task_pane);
+    clear_filter_button->setText("Clear");
+    clear_filter_button->setAccessibleName("Clear filters");
+    clear_filter_button->setFocusPolicy(Qt::StrongFocus);
     clear_filter_button->setToolTip("Clear all filter terms");
     filter_layout->addWidget(filter_edit_, 1);
     filter_layout->addWidget(clear_filter_button);
@@ -632,10 +625,13 @@ void MainWindow::create_layout() {
     outside_view_label_->setWordWrap(true);
     task_layout->addWidget(outside_view_label_);
     connect(filter_edit_, &QLineEdit::textChanged, this, [this](const QString& expression) { update_filter(expression); });
-    connect(clear_filter_button, &QPushButton::clicked, this, [this] { clear_filter(); });
+    connect(clear_filter_button, &QToolButton::clicked, this, [this] { clear_filter(); });
     auto* tree = new TaskTreeView(task_pane);
     task_view_ = tree;
     task_view_->setObjectName("taskTree");
+    task_view_->setAccessibleName("Tasks");
+    // The shared QAction honors the user's keyboard preference.
+    task_view_->set_completion_key_enabled(false);
     task_view_->setDragEnabled(true);
     task_view_->setAcceptDrops(true);
     task_view_->setDropIndicatorShown(true);
@@ -644,22 +640,35 @@ void MainWindow::create_layout() {
     tree->drop_handler = [this](const QModelIndex& source, const QModelIndex& target, int position) {
         return handle_task_drop(source, target, position);
     };
-    task_layout->addWidget(task_view_);
+    selection_bar_ = new QWidget(task_pane);
+    selection_bar_->setObjectName("selectionBar");
+    auto* selection_layout = new QHBoxLayout(selection_bar_);
+    selection_layout->setContentsMargins(4, 0, 4, 0);
+    selection_count_ = new QLabel(selection_bar_);
+    selection_layout->addWidget(selection_count_, 1);
+    auto* wait_button = new QToolButton(selection_bar_);
+    wait_button->setDefaultAction(bulk_wait_action_);
+    wait_button->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+    selection_layout->addWidget(wait_button);
+    auto* clear_selection = new QToolButton(selection_bar_);
+    clear_selection->setText("Clear selection");
+    connect(clear_selection, &QToolButton::clicked, this, [this] { task_view_->clearSelection(); });
+    selection_layout->addWidget(clear_selection);
+    selection_bar_->hide();
+    task_layout->addWidget(selection_bar_);
+    empty_list_label_ = new QLabel(task_pane);
+    empty_list_label_->setObjectName("emptyTaskList");
+    empty_list_label_->setWordWrap(true);
+    task_layout->addWidget(empty_list_label_);
+    task_layout->addWidget(task_view_, 1);
     task_model_ = new QStandardItemModel(this);
-    task_model_->setHorizontalHeaderLabels({"Task", "State", "Priority", "Due", "Tags", "Project"});
+    task_model_->setHorizontalHeaderLabels({"Task", "Status", "Priority", "Due", "Tags", "Project"});
     task_view_->setModel(task_model_);
     task_view_->setSelectionMode(QAbstractItemView::ExtendedSelection);
     task_view_->setSelectionBehavior(QAbstractItemView::SelectRows);
     task_view_->setAllColumnsShowFocus(true);
-    task_view_->setAlternatingRowColors(true);
-    task_view_->setUniformRowHeights(true);
-    task_view_->setExpandsOnDoubleClick(true);
-    task_view_->setContextMenuPolicy(Qt::ActionsContextMenu);
-    task_view_->header()->setStretchLastSection(false);
-    task_view_->header()->setSectionResizeMode(0, QHeaderView::Stretch);
-    for (int column = 1; column < task_model_->columnCount(); ++column) {
-        task_view_->header()->setSectionResizeMode(column, QHeaderView::ResizeToContents);
-    }
+    task_view_->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    task_view_->setExpandsOnDoubleClick(false);
     task_view_->addAction(new_task_action_);
     task_view_->addAction(new_subtask_action_);
     if (complete_action_ != nullptr) {
@@ -676,102 +685,21 @@ void MainWindow::create_layout() {
         if (!task_id.empty()) select_task(task_id);
     });
 
-    detail_stack_ = new QStackedWidget(splitter_);
-    detail_stack_->setObjectName("detailStack");
-    detail_stack_->setMinimumWidth(360);
-    auto* empty_detail = new QWidget(detail_stack_);
-    auto* empty_layout = new QVBoxLayout(empty_detail);
-    empty_layout->addStretch(1);
-    empty_detail_label_ = new QLabel("Open or create a workspace to begin", empty_detail);
-    empty_detail_label_->setObjectName("emptyDetailMessage");
-    auto empty_font = empty_detail_label_->font();
-    empty_font.setPointSize(empty_font.pointSize() + 3);
-    empty_font.setBold(true);
-    empty_detail_label_->setFont(empty_font);
-    empty_detail_label_->setAlignment(Qt::AlignCenter);
-    empty_layout->addWidget(empty_detail_label_);
-    auto* empty_hint = new QLabel("Your tasks remain ordinary Markdown files in a folder you control.", empty_detail);
-    empty_hint->setAlignment(Qt::AlignCenter);
-    empty_hint->setWordWrap(true);
-    empty_layout->addWidget(empty_hint);
-    auto* get_started = new QPushButton("Get started…", empty_detail);
-    get_started->setObjectName("getStartedButton");
-    connect(get_started, &QPushButton::clicked, this, [this] { show_onboarding(); });
-    empty_layout->addWidget(get_started, 0, Qt::AlignCenter);
-    empty_layout->addStretch(1);
-    detail_stack_->addWidget(empty_detail);
-    auto* detail = new QWidget(detail_stack_);
-    auto* detail_layout = new QVBoxLayout(detail);
-    detail_layout->setContentsMargins(14, 10, 10, 6);
-    detail_layout->setSpacing(8);
-    auto* detail_heading = new QLabel("Task details", detail);
-    auto detail_font = detail_heading->font();
-    detail_font.setBold(true);
-    detail_font.setPointSize(detail_font.pointSize() + 2);
-    detail_heading->setFont(detail_font);
-    detail_layout->addWidget(detail_heading);
-    auto* form = new QFormLayout;
-    form->setFieldGrowthPolicy(QFormLayout::AllNonFixedFieldsGrow);
-    title_edit_ = new QLineEdit(detail);
-    title_edit_->setPlaceholderText("What needs to be done?");
-    status_edit_ = new QComboBox(detail);
-    priority_edit_ = new QComboBox(detail);
-    status_edit_->addItems({"To do", "In progress", "Waiting", "Done", "Cancelled"});
-    priority_edit_->addItems({"None", "Low", "Normal", "High", "Urgent"});
-    project_value_ = new QLabel(detail);
-    project_value_->setTextInteractionFlags(Qt::TextSelectableByMouse);
-    tags_edit_ = new QLineEdit(detail);
-    tags_edit_->setPlaceholderText("comma-separated tags");
-    auto* due_row = new QWidget(detail);
-    auto* due_layout = new QHBoxLayout(due_row);
-    due_layout->setContentsMargins(0, 0, 0, 0);
-    due_enabled_ = new QCheckBox("Set", due_row);
-    due_edit_ = new QDateEdit(QDate::currentDate(), due_row);
-    due_edit_->setCalendarPopup(true);
-    due_edit_->setDisplayFormat("yyyy-MM-dd");
-    due_edit_->setEnabled(false);
-    due_layout->addWidget(due_enabled_);
-    due_layout->addWidget(due_edit_, 1);
-    form->addRow("Title", title_edit_);
-    form->addRow("Project", project_value_);
-    form->addRow("State", status_edit_);
-    form->addRow("Priority", priority_edit_);
-    form->addRow("Tags", tags_edit_);
-    form->addRow("Due date", due_row);
-    connect(title_edit_, &QLineEdit::textEdited, this, [this] { schedule_autosave(); });
-    connect(status_edit_, &QComboBox::currentIndexChanged, this, [this] { schedule_autosave(); });
-    connect(priority_edit_, &QComboBox::currentIndexChanged, this, [this] { schedule_autosave(); });
-    connect(tags_edit_, &QLineEdit::textEdited, this, [this] { schedule_autosave(); });
-    connect(due_enabled_, &QCheckBox::toggled, this, [this](bool enabled) {
-        due_edit_->setEnabled(enabled && !read_only_);
-        schedule_autosave();
-        update_schedule_summaries();
+    connect(task_view_->selectionModel(), &QItemSelectionModel::selectionChanged, this, [this] { update_selection_bar(); });
+    connect(tree, &TaskTreeView::completionRequested, this, [this](const QModelIndex& index) {
+        const auto id = index.data(TaskIdRole).toString().toStdString();
+        select_task(id);
+        if (current_task_id_ == id) toggle_current_completion();
     });
-    connect(due_edit_, &QDateEdit::dateChanged, this, [this] { schedule_autosave(); });
-    detail_layout->addLayout(form);
-    auto* schedule_row = new QFormLayout;
-    recurrence_value_ = new QLabel(detail);
-    recurrence_value_->setWordWrap(true);
-    recurrence_button_ = new QPushButton("Recurrence…", detail);
-    recurrence_button_->setObjectName("scheduleRecurrence");
-    reminders_value_ = new QLabel(detail);
-    reminders_value_->setWordWrap(true);
-    reminders_button_ = new QPushButton("Reminders…", detail);
-    reminders_button_->setObjectName("scheduleReminders");
-    schedule_row->addRow(recurrence_button_, recurrence_value_);
-    schedule_row->addRow(reminders_button_, reminders_value_);
-    detail_layout->addLayout(schedule_row);
-    connect(recurrence_button_, &QPushButton::clicked, this, [this] { edit_task_recurrence(); });
-    connect(reminders_button_, &QPushButton::clicked, this, [this] { edit_task_reminders(); });
-    auto* notes_heading = new QLabel("Notes", detail);
-    notes_heading->setStyleSheet("font-weight: 600");
-    detail_layout->addWidget(notes_heading);
-    markdown_editor_ = new MarkdownEditor(detail);
-    markdown_editor_->set_image_importer([this](const QImage& image) { return import_pasted_image(image); });
-    connect(markdown_editor_, &MarkdownEditor::edited, this, [this] { schedule_autosave(); });
-    detail_layout->addWidget(markdown_editor_, 1);
-    detail_stack_->addWidget(detail);
-    detail_stack_->setCurrentIndex(0);
+    connect(tree, &TaskTreeView::menuRequested, this, &MainWindow::show_task_menu);
+    connect(tree, &TaskTreeView::detailsRequested, this, [this](const QModelIndex& index) {
+        const auto id = index.data(TaskIdRole).toString().toStdString();
+        select_task(id);
+        if (current_task_id_ == id) show_details();
+    });
+    connect(tree, &QTreeView::expanded, this, [this](const QModelIndex& index) { remember_expansion(index, true); });
+    connect(tree, &QTreeView::collapsed, this, [this](const QModelIndex& index) { remember_expansion(index, false); });
+    create_detail_pane();
     splitter_->setStretchFactor(0, 2);
     splitter_->setStretchFactor(1, 3);
     splitter_->setSizes({500, 780});
@@ -825,7 +753,7 @@ void MainWindow::create_layout() {
 }
 
 bool MainWindow::handle_task_drop(const QModelIndex& source_index, const QModelIndex& target, int position) {
-    if (sort_ != TaskSort::Manual || !source_index.isValid()) return false;
+    if (read_only_ || sort_ != TaskSort::Manual) return false;
     const auto source_id = source_index.siblingAtColumn(0).data(TaskIdRole).toString().toStdString();
     if (source_id.empty()) return false;
     const auto source = controller_.snapshot().tasks.find(source_id);
@@ -845,6 +773,7 @@ bool MainWindow::handle_task_drop(const QModelIndex& source_index, const QModelI
         return false;
     }
 
+    if (!flush_pending_edits()) return false;
     std::string error;
     if (!controller_.move_task_branch(source_id, project_id, target_parent, error)) {
         statusBar()->showMessage(QString::fromStdString(error), 5000);
@@ -863,9 +792,63 @@ bool MainWindow::handle_task_drop(const QModelIndex& source_index, const QModelI
             return false;
         }
     }
-    current_task_id_ = source_id;
+    select_task(source_id);
     refresh_view();
     return true;
+}
+
+void MainWindow::export_as_mdbase() {
+    if (mdbase_transfer_in_progress_) {
+        QMessageBox::information(this, "Transfer in progress", "Another transfer is already running.");
+        return;
+    }
+    if (controller_.is_open() && !flush_pending_edits()) {
+        QMessageBox::warning(this, "Export as mdbase", "Unsaved edits could not be flushed. Export was not started.");
+        return;
+    }
+    if (!controller_.is_open()) {
+        QMessageBox::information(this, "Export as mdbase", "Open a workspace first.");
+        return;
+    }
+    const auto workspace_root = controller_.snapshot().root_path;
+    const auto& snapshot = controller_.snapshot();
+    MdbaseExportDialog dlg(workspace_root, snapshot.projects.size(), snapshot.tasks.size(),
+                           snapshot.diagnostics.size(), this);
+    mdbase_transfer_in_progress_ = true;
+    auto guard = qScopeGuard([this]{ mdbase_transfer_in_progress_ = false; update_action_state(); });
+    update_action_state();
+    dlg.exec();
+}
+
+void MainWindow::import_from_mdbase() {
+    if (mdbase_transfer_in_progress_) {
+        QMessageBox::information(this, "Transfer in progress", "Another transfer is already running.");
+        return;
+    }
+    // Available even when no workspace is open per spec 7.2
+    if (controller_.is_open() && !flush_pending_edits()) {
+        QMessageBox::warning(this, "Import from mdbase", "Unsaved edits could not be flushed. Import was not started.");
+        return;
+    }
+    MdbaseImportWizard wizard(this);
+    mdbase_transfer_in_progress_ = true;
+    auto guard = qScopeGuard([this]{ mdbase_transfer_in_progress_ = false; update_action_state(); });
+    update_action_state();
+    if (wizard.exec() != QDialog::Accepted) return;
+    if (!wizard.import_succeeded()) return;
+    auto path = wizard.imported_workspace_path();
+    if (path.empty()) return;
+    if (wizard.open_imported_workspace_requested()) {
+        open_workspace_path(path, false);
+        return;
+    }
+    // Opening goes through existing pending-edit/read-only/lock checks
+    auto reply = QMessageBox::question(this, "Import succeeded",
+        QString("Imported workspace at %1.\nOpen it now?").arg(display_path(path)),
+        QMessageBox::Yes | QMessageBox::No);
+    if (reply == QMessageBox::Yes) {
+        open_workspace_path(path, false);
+    }
 }
 
 void MainWindow::export_workspace_archive() {
@@ -948,8 +931,11 @@ void MainWindow::choose_workspace(bool create_new) {
 void MainWindow::refresh_view() {
     refresh_project_filter();
     const auto selected_task_id = current_task_id_;
+    auto selection = selected_task_ids(task_view_);
+    if (selection.empty() && !selected_task_id.empty()) selection.insert(selected_task_id);
     const auto scroll = task_view_->verticalScrollBar()->value();
     const auto& snapshot = controller_.snapshot();
+    const auto task_progress = count_task_progress(snapshot);
     std::vector<const TaskRecord*> visible;
     std::unordered_set<std::string> visible_ids;
     for (const auto& [id, task] : snapshot.tasks) {
@@ -969,19 +955,19 @@ void MainWindow::refresh_view() {
     }
     {
         QSignalBlocker blocker(task_view_->selectionModel());
+        rebuilding_view_ = true;
+        const auto& projects = filter_session_.active_filter().project_ids;
+        const auto context = projects.size() == 1 ? projects.front() : std::string{};
         task_model_->removeRows(0, task_model_->rowCount());
         for (const auto* task : roots) {
-            const auto row = make_task_row(*task, settings_, snapshot);
+            const auto row = make_task_row(*task, settings_, snapshot, context, &task_progress);
             task_model_->appendRow(row);
-            append_task_tree(row.front(), task->id, children, settings_, snapshot);
+            append_task_tree(row.front(), task->id, children, settings_, snapshot, context, &task_progress);
         }
-        task_view_->expandAll();
+        restore_task_rows(task_view_, view_tab_states_[active_view_index_], selection, selected_task_id);
+        apply_view_layout();
         task_view_->verticalScrollBar()->setValue(scroll);
-        if (!selected_task_id.empty()) {
-            const auto matches = task_model_->match(task_model_->index(0, 0), TaskIdRole, QString::fromStdString(selected_task_id), 1,
-                                                    Qt::MatchExactly | Qt::MatchRecursive);
-            if (!matches.empty()) task_view_->setCurrentIndex(matches.front());
-        }
+        rebuilding_view_ = false;
     }
     statusBar()->showMessage(QString("%1 of %2 tasks indexed").arg(visible.size()).arg(snapshot.tasks.size()));
     update_detail_availability();
@@ -989,7 +975,11 @@ void MainWindow::refresh_view() {
     show_task_action_->setEnabled(!selected_visible);
     outside_view_label_->setText(selected_visible ? QString{} : "Current task is outside this view. Use View > Show Current Task.");
     outside_view_label_->setVisible(!selected_visible);
+    empty_list_label_->setVisible(visible.empty());
+    empty_list_label_->setText(!controller_.is_open() ? "Open or create a workspace from File to begin."
+        : snapshot.tasks.empty() ? "No tasks yet. Add a task to get started." : "No tasks match this view. Adjust or clear the filter.");
     update_action_state();
+    update_selection_bar();
 }
 
 void MainWindow::update_detail_availability() {
@@ -1046,10 +1036,11 @@ void MainWindow::refresh_filter_chips() {
         if (tokens[index].starts_with("project:")) {
             label = "Project: " + QString::fromStdString(tokens[index].substr(8));
         }
-        auto* chip = new QPushButton(label + " ×");
+        auto* chip = new QToolButton;
+        chip->setText(label + " ×");
         chip->setProperty("filterChip", true);
         chip->setToolTip("Remove filter");
-        connect(chip, &QPushButton::clicked, this, [this, index] { remove_filter_token(index); });
+        connect(chip, &QToolButton::clicked, this, [this, index] { remove_filter_token(index); });
         filter_chips_->addWidget(chip);
     }
     filter_chips_->addStretch(1);
@@ -1092,8 +1083,7 @@ int MainWindow::add_view_tab(const OpenViewTab& tab) {
 void MainWindow::switch_view(int index) {
     if (index < 0 || index >= static_cast<int>(view_tab_states_.size())) return;
     if (index != active_view_index_) {
-        const auto pending = autosave_timer_ != nullptr && autosave_timer_->isActive();
-        if ((pending || markdown_editor_->is_dirty()) && !flush_pending_edits()) {
+        if (!flush_pending_edits()) {
             QSignalBlocker blocker(view_tabs_);
             view_tabs_->setCurrentIndex(active_view_index_);
             return;
@@ -1101,8 +1091,12 @@ void MainWindow::switch_view(int index) {
         sync_active_view();
     }
     active_view_index_ = index;
-    const auto& state = view_tab_states_[static_cast<size_t>(index)];
+    const auto state = view_tab_states_[static_cast<size_t>(index)];
     sort_ = state.sort;
+    {
+        QSignalBlocker blocker(task_view_->selectionModel());
+        task_view_->clearSelection();
+    }
     current_task_id_ = state.selected_task_id;
     if (state.filter_expression.empty()) filter_session_.clear();
     else if (!filter_session_.update(state.filter_expression)) filter_session_.clear();
@@ -1120,6 +1114,7 @@ void MainWindow::switch_view(int index) {
 
 void MainWindow::close_view(int index) {
     if (index <= 0 || index >= static_cast<int>(view_tab_states_.size())) return;
+    if (index == active_view_index_ && !flush_pending_edits()) return;
     sync_active_view();
     view_tab_states_.erase(view_tab_states_.begin() + index);
     view_tabs_->removeTab(index);
@@ -1157,13 +1152,16 @@ QWidget* MainWindow::create_tab_controls(QWidget* parent) {
     return row;
 }
 
-void MainWindow::add_tab_menu_action(QMenu* menu, const QString& label, const OpenViewTab& tab) {
+void MainWindow::add_tab_menu_action(QMenu* menu, const QString& label, const OpenViewTab& tab,
+                                     const bool match_presentation) {
     auto* action = menu->addAction(label);
     action->setCheckable(true);
-    action->setChecked(std::any_of(view_tab_states_.begin(), view_tab_states_.end(), [&tab](const OpenViewTab& open) {
-        return open.filter_expression == tab.filter_expression && open.sort == tab.sort;
+    action->setChecked(std::any_of(view_tab_states_.begin(), view_tab_states_.end(), [&tab, match_presentation](const OpenViewTab& open) {
+        return same_view_tab(open, tab, match_presentation);
     }));
-    connect(action, &QAction::triggered, this, [this, tab] { open_view_tab(tab); });
+    connect(action, &QAction::triggered, this, [this, tab, match_presentation] {
+        open_view_tab(tab, match_presentation);
+    });
 }
 
 void MainWindow::populate_tab_menu(QMenu* menu) {
@@ -1181,15 +1179,19 @@ void MainWindow::populate_tab_menu(QMenu* menu) {
     menu->addSection("Saved views");
     if (settings_.saved_views.empty()) menu->addAction("No saved views yet")->setEnabled(false);
     for (const auto& view : settings_.saved_views) {
-        add_tab_menu_action(menu, QString::fromStdString(view.name),
-                            {view.name, view.filter_expression, view.sort, {}, 0, false});
+        OpenViewTab tab{view.name, view.filter_expression, view.sort, {}, 0, false};
+        tab.layout = view.layout;
+        tab.hidden_columns = view.hidden_columns;
+        tab.expanded_task_ids = view.expanded_task_ids;
+        tab.expansion_initialized = view.expansion_initialized;
+        add_tab_menu_action(menu, QString::fromStdString(view.name), tab, true);
     }
     menu->addSeparator();
     auto* custom = menu->addAction("Custom view…");
     connect(custom, &QAction::triggered, this, [this] { new_view_tab(); });
 }
 
-void MainWindow::open_view_tab(const OpenViewTab& tab) {
+void MainWindow::open_view_tab(const OpenViewTab& tab, const bool match_presentation) {
     sync_active_view();
     if (tab.all_tasks) {
         view_tabs_->setCurrentIndex(0);
@@ -1197,7 +1199,7 @@ void MainWindow::open_view_tab(const OpenViewTab& tab) {
     }
     for (size_t index = 0; index < view_tab_states_.size(); ++index) {
         const auto& open = view_tab_states_[index];
-        if (open.filter_expression == tab.filter_expression && open.sort == tab.sort) {
+        if (same_view_tab(open, tab, match_presentation)) {
             view_tabs_->setCurrentIndex(static_cast<int>(index));
             return;
         }
@@ -1214,7 +1216,15 @@ void MainWindow::new_view_tab() {
     auto* search = new QLineEdit(&dialog);
     search->setPlaceholderText("Search projects and saved views...");
     auto* choices = new QListWidget(&dialog);
-    struct ViewChoice { QString label; QString expression; };
+    struct ViewChoice {
+        QString label;
+        QString expression;
+        TaskSort sort{TaskSort::Manual};
+        std::string layout{"list"};
+        std::vector<int> hidden_columns;
+        std::vector<std::string> expanded_task_ids;
+        bool expansion_initialized{false};
+    };
     std::vector<ViewChoice> all_choices{{"All Tasks", QString{}}};
     for (const auto& [id, project] : controller_.snapshot().projects) {
         all_choices.push_back({QString("Project: %1").arg(QString::fromStdString(project.display_name)),
@@ -1222,7 +1232,8 @@ void MainWindow::new_view_tab() {
     }
     for (const auto& view : settings_.saved_views) {
         all_choices.push_back({QString("Saved view: %1").arg(QString::fromStdString(view.name)),
-                               QString::fromStdString(view.filter_expression)});
+                               QString::fromStdString(view.filter_expression), view.sort, view.layout,
+                               view.hidden_columns, view.expanded_task_ids, view.expansion_initialized});
     }
     std::sort(all_choices.begin() + 1, all_choices.end(), [](const ViewChoice& left, const ViewChoice& right) {
         return left.label < right.label;
@@ -1231,10 +1242,12 @@ void MainWindow::new_view_tab() {
         const auto previous = choices->currentItem() != nullptr ? choices->currentItem()->text() : QString{};
         choices->clear();
         int restore = 0;
-        for (const auto& choice : all_choices) {
+        for (size_t choice_index = 0; choice_index < all_choices.size(); ++choice_index) {
+            const auto& choice = all_choices[choice_index];
             if (!choice.label.contains(query, Qt::CaseInsensitive)) continue;
             auto* item = new QListWidgetItem(choice.label, choices);
             item->setData(Qt::UserRole, choice.expression);
+            item->setData(Qt::UserRole + 1, static_cast<int>(choice_index));
             if (choice.label == previous) restore = choices->count() - 1;
         }
         if (choices->count() > 0) choices->setCurrentRow(restore);
@@ -1253,12 +1266,20 @@ void MainWindow::new_view_tab() {
     connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
     if (dialog.exec() != QDialog::Accepted || name->text().trimmed().isEmpty() || !choices->currentItem()) return;
     sync_active_view();
-    const auto expression = choices->currentItem()->data(Qt::UserRole).toString().toStdString();
-    const auto index = add_view_tab(OpenViewTab{name->text().trimmed().toStdString(), expression, TaskSort::Manual, {}, 0, false});
+    const auto choice_index = choices->currentItem()->data(Qt::UserRole + 1).toInt();
+    if (choice_index < 0 || choice_index >= static_cast<int>(all_choices.size())) return;
+    const auto& choice = all_choices[static_cast<size_t>(choice_index)];
+    OpenViewTab tab{name->text().trimmed().toStdString(), choice.expression.toStdString(), choice.sort, {}, 0, false};
+    tab.layout = choice.layout;
+    tab.hidden_columns = choice.hidden_columns;
+    tab.expanded_task_ids = choice.expanded_task_ids;
+    tab.expansion_initialized = choice.expansion_initialized;
+    const auto index = add_view_tab(tab);
     view_tabs_->setCurrentIndex(index);
 }
 
 void MainWindow::restore_view_tabs() {
+    QSignalBlocker tabs_blocker(view_tabs_);
     while (view_tabs_->count() > 1) view_tabs_->removeTab(1);
     view_tab_states_.clear();
     view_tab_states_.push_back(OpenViewTab{"All Tasks", {}, TaskSort::Manual, {}, 0, true});
@@ -1304,8 +1325,10 @@ void MainWindow::load_settings() {
     resize(std::min(settings_.window_width, available.width()),
            std::min(settings_.window_height, available.height()));
     if (splitter_ != nullptr) {
-        splitter_->setSizes({settings_.task_pane_width,
-                             std::max(480, width() - settings_.task_pane_width)});
+        splitter_->setSizes({settings_.task_pane_width, settings_.details_pane_width});
+        detail_stack_->setVisible(settings_.details_visible);
+        details_action_->setChecked(settings_.details_visible);
+        details_action_->setText(settings_.details_visible ? "Hide details" : "Show details");
     }
     if (primary_toolbar_ != nullptr) primary_toolbar_->setVisible(settings_.toolbar_visible);
     applying_settings_ = false;
@@ -1335,6 +1358,25 @@ void MainWindow::create_theme_menu(QMenu* appearance) {
 void MainWindow::set_theme(const QString& theme) {
     settings_.theme = theme.toStdString();
     apply_theme(settings_);
+    // Fusion style does not always propagate the application palette to QToolBar
+    // and QMenuBar.  Apply an explicit stylesheet so these chrome widgets follow
+    // the selected theme instead of falling back to their built-in dark colours.
+    const auto p = QApplication::palette();
+    const auto window = p.color(QPalette::Window).name();
+    const auto text = p.color(QPalette::WindowText).name();
+    const auto highlight = p.color(QPalette::Highlight).name();
+    menuBar()->setStyleSheet(
+        QString("QMenuBar { background: %1; color: %2; }"
+                "QMenuBar::item { background: transparent; color: %2; padding: 4px 8px; }"
+                "QMenuBar::item:selected { background: %3; color: %2; }")
+            .arg(window, text, highlight));
+    if (primary_toolbar_ != nullptr) {
+        primary_toolbar_->setStyleSheet(
+            QString("QToolBar { background: %1; border: none; spacing: 4px; }"
+                    "QToolButton { background: transparent; color: %2; padding: 4px 8px; }"
+                    "QToolButton:hover { background: %3; }")
+                .arg(window, text, highlight));
+    }
     refresh_action_icons(this);
     for (auto* action : theme_menu_->actions()) {
         if (action->isCheckable()) action->setChecked(action->data().toString() == theme);
@@ -1347,7 +1389,11 @@ void MainWindow::set_density(const QString& density) {
     const auto styles = density == "compact"
         ? QString("QTreeView::item { padding: 1px; } QPushButton { min-height: 24px; }")
         : QString("QTreeView::item { padding: 5px; } QPushButton { min-height: 36px; }");
-    setStyleSheet(styles + " QPushButton#scheduleRecurrence, QPushButton#scheduleReminders { min-height: 24px; }");
+    // Apply the density stylesheet to the splitter rather than the main window so
+    // that the menu bar and toolbar can still inherit the application palette.
+    if (splitter_ != nullptr) {
+        splitter_->setStyleSheet(styles + " QPushButton#scheduleRecurrence, QPushButton#scheduleReminders { min-height: 24px; }");
+    }
     if (controller_.is_open() && !applying_settings_) persist_settings();
 }
 
@@ -1406,8 +1452,11 @@ void MainWindow::persist_settings() {
         settings_.window_width = width();
         settings_.window_height = height();
     }
-    if (splitter_ != nullptr && !splitter_->sizes().empty()) settings_.task_pane_width = splitter_->sizes().front();
-    if (primary_toolbar_ != nullptr) settings_.toolbar_visible = primary_toolbar_->isVisible();
+    if (splitter_ != nullptr && !detail_stack_->isHidden()) {
+        settings_.task_pane_width = splitter_->sizes().front();
+        settings_.details_pane_width = splitter_->sizes().back();
+    }
+    if (primary_toolbar_ != nullptr) settings_.toolbar_visible = !primary_toolbar_->isHidden();
     settings_.active_view_tab = active_view_index_;
     settings_.open_view_tabs.clear();
     for (const auto& tab : view_tab_states_) {
@@ -1426,11 +1475,12 @@ bool MainWindow::should_hide_to_tray() const {
 
 void MainWindow::quit_application() {
     if (quitting_) return;
+    if (!flush_pending_edits()) return;
     quitting_ = true;
-    flush_pending_edits();
     sync_active_view();
     persist_settings();
     monitor_.stop();
+    autosave_paused_ = false;
     workspace_lock_.release();
     if (reminder_timer_) reminder_timer_->stop();
     if (autosave_timer_) autosave_timer_->stop();
@@ -1447,8 +1497,9 @@ void MainWindow::closeEvent(QCloseEvent* event) {
         event->ignore();
         return;
     }
-    event->accept();
     quit_application();
+    if (quitting_) event->accept();
+    else event->ignore();
 }
 
 void MainWindow::save_current_view() {
@@ -1460,7 +1511,12 @@ void MainWindow::save_current_view() {
         return QString::fromStdString(view.name).compare(name, Qt::CaseInsensitive) == 0;
     });
     sync_active_view();
-    const SavedView view{name.toStdString(), filter_session_.expression(), sort_};
+    SavedView view{name.toStdString(), filter_session_.expression(), sort_};
+    const auto& active = view_tab_states_[active_view_index_];
+    view.layout = active.layout;
+    view.hidden_columns = active.hidden_columns;
+    view.expanded_task_ids = active.expanded_task_ids;
+    view.expansion_initialized = active.expansion_initialized;
     if (found == settings_.saved_views.end()) settings_.saved_views.push_back(view);
     else *found = view;
     persist_settings();
@@ -1479,7 +1535,12 @@ void MainWindow::open_saved_view() {
     });
     if (found == settings_.saved_views.end()) return;
     sync_active_view();
-    const auto index = add_view_tab(OpenViewTab{found->name, found->filter_expression, found->sort, {}, 0, false});
+    OpenViewTab tab{found->name, found->filter_expression, found->sort, {}, 0, false};
+    tab.layout = found->layout;
+    tab.hidden_columns = found->hidden_columns;
+    tab.expanded_task_ids = found->expanded_task_ids;
+    tab.expansion_initialized = found->expansion_initialized;
+    const auto index = add_view_tab(tab);
     view_tabs_->setCurrentIndex(index);
 }
 
@@ -1504,8 +1565,7 @@ void MainWindow::set_sort(TaskSort sort) {
 
 void MainWindow::select_task(const std::string& task_id) {
     const auto switching_tasks = !current_task_id_.empty() && current_task_id_ != task_id;
-    const auto has_pending_edits = autosave_timer_ != nullptr && autosave_timer_->isActive();
-    if (switching_tasks && (has_pending_edits || markdown_editor_->is_dirty()) && !flush_pending_edits()) {
+    if (switching_tasks && !flush_pending_edits()) {
         const auto previous = task_model_->match(task_model_->index(0, 0), TaskIdRole,
                                                  QString::fromStdString(current_task_id_), 1,
                                                  Qt::MatchExactly | Qt::MatchRecursive);
@@ -1518,25 +1578,29 @@ void MainWindow::select_task(const std::string& task_id) {
     const auto found = controller_.snapshot().tasks.find(task_id);
     if (found == controller_.snapshot().tasks.end()) return;
     const auto& task = found->second;
+    synchronize_task_selection(task_view_, task_id);
+    if (keep_detail_draft(current_task_id_, task, detail_source_hash_, has_unsaved_task_edits())) return;
+    detail_source_hash_ = task.source_hash;
+    if (switching_tasks) autosave_paused_ = false;
     const bool keep_notes = should_keep_editor_notes(current_task_id_, task_id, task.body, markdown_editor_);
     applying_detail_ = true;
     current_task_id_ = task_id;
     title_edit_->setText(QString::fromStdString(task.title));
-    project_value_->setText(project_name(controller_.snapshot(), task.project_id));
+    project_value_->setText(task_navigation(controller_.snapshot(), task));
     tags_edit_->setText(tags_label(task.tags));
     if (!keep_notes) markdown_editor_->set_markdown(task.body);
     markdown_editor_->set_task_directory(std::filesystem::path(task.source_path).parent_path());
     markdown_editor_->set_history(controller_.task_history(task_id));
     status_edit_->setCurrentText(status_label(task.status));
     priority_edit_->setCurrentText(priority_label(task.priority));
-    const auto due = QDate::fromString(QString::fromStdString(task.due_yaml), Qt::ISODate);
-    due_enabled_->setChecked(due.isValid());
-    due_edit_->setDate(due.isValid() ? due : QDate::currentDate());
-    due_edit_->setEnabled(due.isValid() && !read_only_);
+    due_date_ = QDate::fromString(QString::fromStdString(task.due_yaml), Qt::ISODate);
     staged_recurrence_yaml_ = task.recurrence_yaml;
     staged_reminders_yaml_ = task.reminders_yaml;
     update_schedule_summaries();
+    update_property_buttons();
+    update_detail_sections();
     detail_stack_->setCurrentIndex(1);
+    save_feedback_->setText(markdown_editor_->is_dirty() ? "Unsaved changes" : "Saved");
     applying_detail_ = false;
     update_action_state();
 }
@@ -1544,23 +1608,23 @@ void MainWindow::select_task(const std::string& task_id) {
 void MainWindow::update_schedule_summaries() {
     if (recurrence_value_ != nullptr) recurrence_value_->setText(recurrence_summary(staged_recurrence_yaml_));
     if (reminders_value_ != nullptr) reminders_value_->setText(reminders_summary(staged_reminders_yaml_));
+    update_property_buttons();
 }
 
 void MainWindow::edit_task_recurrence() {
     if (read_only_ || current_task_id_.empty()) return;
-    const auto due = due_enabled_->isChecked() ? due_edit_->date() : QDate{};
-    if (!edit_recurrence(this, staged_recurrence_yaml_, due)) return;
+    if (!edit_recurrence(recurrence_button_, staged_recurrence_yaml_, due_date_)) return;
     update_schedule_summaries();
     schedule_autosave();
 }
 
 void MainWindow::edit_task_reminders() {
     if (read_only_ || current_task_id_.empty()) return;
-    if (!due_enabled_->isChecked()) {
+    if (!due_date_.isValid()) {
         QMessageBox::information(this, "Reminders", "Set a due date before adding reminders.");
         return;
     }
-    if (!edit_reminders(this, staged_reminders_yaml_)) return;
+    if (!edit_reminders(reminders_button_, staged_reminders_yaml_)) return;
     update_schedule_summaries();
     schedule_autosave();
 }
@@ -1569,6 +1633,8 @@ void MainWindow::save_current_task() { apply_save_result(commit_current_task(), 
 
 std::string MainWindow::creation_project_id() const {
     if (controller_.snapshot().projects.empty()) return {};
+    const auto& projects = filter_session_.active_filter().project_ids;
+    if (projects.size() == 1 && controller_.snapshot().projects.contains(projects.front())) return projects.front();
     const auto selection = task_view_ == nullptr || task_view_->selectionModel() == nullptr
         ? QModelIndexList{} : task_view_->selectionModel()->selectedRows();
     if (selection.size() == 1) {
@@ -1582,7 +1648,7 @@ std::string MainWindow::creation_project_id() const {
 }
 
 void MainWindow::create_task() {
-    if (read_only_) return;
+    if (read_only_ || !flush_pending_edits()) return;
     if (!controller_.is_open()) { QMessageBox::information(this, "No workspace", "Open or create a workspace first."); return; }
     const auto project_id = creation_project_id();
     if (project_id.empty()) { QMessageBox::warning(this, "No project", "The workspace has no project available."); return; }
@@ -1597,7 +1663,7 @@ void MainWindow::create_task() {
 }
 
 void MainWindow::create_subtask() {
-    if (read_only_) return;
+    if (read_only_ || !flush_pending_edits()) return;
     const auto parent = controller_.snapshot().tasks.find(current_task_id_);
     if (parent == controller_.snapshot().tasks.end()) return;
     bool accepted = false;
@@ -1609,24 +1675,28 @@ void MainWindow::create_subtask() {
         QMessageBox::warning(this, "Create subtask failed", QString::fromStdString(error));
         return;
     }
+    view_tab_states_[active_view_index_].expanded_task_ids.push_back(current_task_id_);
     select_task(id);
     refresh_view();
 }
 
 void MainWindow::complete_and_stop_repeating() {
-    if (read_only_) return;
+    if (read_only_ || !flush_pending_edits()) return;
     const auto found = controller_.snapshot().tasks.find(current_task_id_);
     if (found == controller_.snapshot().tasks.end()) return;
     std::string error;
-    if (!controller_.complete_and_stop_repeating(current_task_id_, false, error)) {
+    const auto branch = ask_complete_branch(this, controller_.unfinished_descendant_count(current_task_id_));
+    if (!branch) return;
+    if (!controller_.complete_and_stop_repeating(current_task_id_, *branch, error)) {
         QMessageBox::warning(this, "Status change failed", QString::fromStdString(error));
         return;
     }
+    select_task(current_task_id_);
     refresh_view();
 }
 
 void MainWindow::toggle_current_completion() {
-    if (read_only_) return;
+    if (read_only_ || !flush_pending_edits()) return;
     const auto found = controller_.snapshot().tasks.find(current_task_id_);
     if (found == controller_.snapshot().tasks.end()) return;
     std::string error;
@@ -1635,6 +1705,7 @@ void MainWindow::toggle_current_completion() {
             QMessageBox::warning(this, "Status change failed", QString::fromStdString(error));
             return;
         }
+        select_task(current_task_id_);
         refresh_view();
         return;
     }
@@ -1644,11 +1715,29 @@ void MainWindow::toggle_current_completion() {
         QMessageBox::warning(this, "Status change failed", QString::fromStdString(error));
         return;
     }
+    select_task(current_task_id_);
+    refresh_view();
+}
+
+void MainWindow::change_current_status(TaskStatus status) {
+    const auto found = controller_.snapshot().tasks.find(current_task_id_);
+    if (found == controller_.snapshot().tasks.end()) return;
+    const auto previous = found->second.status;
+    // The picker is a command, so the pending draft retains its original status.
+    { QSignalBlocker blocker(status_edit_); status_edit_->setCurrentIndex(static_cast<int>(previous)); }
+    if (read_only_ || previous == status || !flush_pending_edits()) return;
+    if (status == TaskStatus::Done) { toggle_current_completion(); return; }
+    std::string error;
+    if (!controller_.set_task_status(current_task_id_, status, error, false)) {
+        QMessageBox::warning(this, "Status change failed", QString::fromStdString(error));
+        return;
+    }
+    select_task(current_task_id_);
     refresh_view();
 }
 
 void MainWindow::bulk_wait_selected() {
-    if (read_only_) return;
+    if (read_only_ || !flush_pending_edits()) return;
     const auto selection = task_view_->selectionModel()->selectedRows();
     std::vector<std::string> ids;
     for (const auto& index : selection) {
@@ -1660,11 +1749,12 @@ void MainWindow::bulk_wait_selected() {
         QMessageBox::warning(this, "Bulk status change failed", QString::fromStdString(error));
         return;
     }
+    select_task(current_task_id_);
     refresh_view();
 }
 
 void MainWindow::trash_current_task() {
-    if (read_only_) return;
+    if (read_only_ || !flush_pending_edits()) return;
     if (current_task_id_.empty()) return;
     const auto result = controller_.trash_task(current_task_id_);
     if (result.status != TrashStatus::Succeeded) QMessageBox::warning(this, "Trash failed", QString::fromStdString(result.message));
@@ -1688,7 +1778,7 @@ void MainWindow::restore_task() {
 }
 
 void MainWindow::import_attachment() {
-    if (read_only_) return;
+    if (read_only_ || !flush_pending_edits()) return;
     const auto found = controller_.snapshot().tasks.find(current_task_id_);
     if (found == controller_.snapshot().tasks.end()) return;
     const auto source = QFileDialog::getOpenFileName(this, "Import attachment");
@@ -1700,7 +1790,11 @@ void MainWindow::import_attachment() {
     task.body += "\n[Attachment](" + result.relative_link + ")\n";
     const auto save_result = controller_.save_task(std::move(task));
     if (save_result.status != SaveStatus::Saved) QMessageBox::warning(this, "Attachment save failed", QString::fromStdString(save_result.message));
-    else { markdown_editor_->set_markdown(controller_.snapshot().tasks.at(current_task_id_).body); statusBar()->showMessage("Attachment imported"); }
+    else {
+        markdown_editor_->set_markdown(controller_.snapshot().tasks.at(current_task_id_).body);
+        update_detail_sections();
+        statusBar()->showMessage("Attachment imported");
+    }
 }
 
 void MainWindow::rebuild_reminder_schedule() {
@@ -1741,7 +1835,7 @@ void MainWindow::handle_external_change() {
     const auto external_settings = todobench::load_settings(settings_path);
     if (std::holds_alternative<Settings>(external_settings)
         && std::get<Settings>(external_settings).source_hash != settings_.source_hash) {
-        if (!settings_changed(settings_)) { load_settings(); restore_view_tabs(); }
+        if (read_only_ || !settings_changed(settings_)) { load_settings(); restore_view_tabs(); }
         else {
             std::string message;
             save_settings(settings_path, settings_, message);
@@ -1759,15 +1853,20 @@ void MainWindow::handle_external_change() {
     }
     std::string error;
     if (controller_.refresh(error)) {
+        select_task(current_task_id_);
         refresh_view();
         rebuild_reminder_schedule();
     }
 }
 
 bool MainWindow::show_conflict_dialog() {
+    if (conflict_dialog_active_) return false;
+    if (autosave_timer_ != nullptr) autosave_timer_->stop();
     const auto found = controller_.snapshot().tasks.find(current_task_id_);
     if (found == controller_.snapshot().tasks.end()) return false;
     conflict_dialog_active_ = true;
+    autosave_paused_ = true;
+    save_feedback_->setText("Save conflict");
     QDialog dialog(this);
     dialog.setWindowTitle("This task also changed in the folder");
     dialog.resize(700, 500);
@@ -1781,6 +1880,7 @@ bool MainWindow::show_conflict_dialog() {
     merged->setPlainText(QString::fromStdString(markdown_editor_->markdown()));
     layout->addWidget(merged, 1);
     auto* buttons = new QDialogButtonBox(QDialogButtonBox::Cancel, &dialog);
+    connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
     auto* disk = buttons->addButton("Keep the file in the folder", QDialogButtonBox::AcceptRole);
     auto* local = buttons->addButton("Keep what I edited here", QDialogButtonBox::AcceptRole);
     auto* merge = buttons->addButton("Save the merged text", QDialogButtonBox::AcceptRole);
@@ -1798,8 +1898,7 @@ bool MainWindow::show_conflict_dialog() {
     bool resolved = false;
     if (result >= 10 && result <= 12) {
         const auto resolution = static_cast<ConflictResolution>(result - 10);
-        auto edited = found->second;
-        edited.body = markdown_editor_->markdown();
+        auto edited = edited_current_task();
         std::string error;
         if (!controller_.resolve_task_conflict(edited, resolution, merged->toPlainText().toStdString(), error)) {
             QMessageBox::warning(this, "Could not keep the chosen text", QString::fromStdString(error));
@@ -1809,7 +1908,7 @@ bool MainWindow::show_conflict_dialog() {
             std::string refresh_error;
             controller_.refresh(refresh_error);
             refresh_view();
-            if (resolution == ConflictResolution::UseDisk) select_task(current_task_id_);
+            select_task(current_task_id_);
             resolved = true;
         }
     }
@@ -1864,7 +1963,7 @@ void MainWindow::show_missed_reminders() {
 }
 
 void MainWindow::duplicate_current_task() {
-    if (read_only_) return;
+    if (read_only_ || !flush_pending_edits()) return;
     if (current_task_id_.empty()) return;
     std::string id;
     std::string error;
@@ -1872,8 +1971,8 @@ void MainWindow::duplicate_current_task() {
         QMessageBox::warning(this, "Duplicate failed", QString::fromStdString(error));
         return;
     }
-    refresh_view();
     select_task(id);
+    refresh_view();
 }
 
 void MainWindow::create_project() {
@@ -1937,7 +2036,7 @@ void MainWindow::archive_current_project() {
 }
 
 void MainWindow::move_current_task() {
-    if (read_only_) return;
+    if (read_only_ || !flush_pending_edits()) return;
     if (current_task_id_.empty() || controller_.snapshot().projects.empty()) return;
     QStringList labels;
     const auto choices = active_project_choices(controller_.snapshot());
@@ -1952,6 +2051,7 @@ void MainWindow::move_current_task() {
         QMessageBox::warning(this, "Move failed", QString::fromStdString(error));
         return;
     }
+    select_task(current_task_id_);
     refresh_view();
 }
 
@@ -2034,17 +2134,21 @@ void MainWindow::show_diagnostics() {
 
 void MainWindow::schedule_autosave() {
     if (applying_detail_ || read_only_ || autosave_paused_ || !controller_.is_open()) return;
+    if (save_feedback_ != nullptr) save_feedback_->setText("Unsaved changes");
     if (autosave_timer_ != nullptr) autosave_timer_->start();
 }
 
-void MainWindow::autosave_current_task() { apply_save_result(commit_current_task(), false); }
+void MainWindow::autosave_current_task() {
+    if (autosave_paused_ || conflict_dialog_active_ || read_only_) return;
+    apply_save_result(commit_current_task(), false);
+}
 
 bool MainWindow::metadata_matches_open_task() const {
     const auto found = controller_.snapshot().tasks.find(current_task_id_);
     if (found == controller_.snapshot().tasks.end()) return true;
     const auto& task = found->second;
     if (!editor_identity_matches(task, title_edit_, tags_edit_, status_edit_, priority_edit_)) return false;
-    return editor_schedule_matches(task, due_enabled_->isChecked(), due_edit_->date(),
+    return editor_schedule_matches(task, due_date_,
                                    staged_recurrence_yaml_, staged_reminders_yaml_);
 }
 
@@ -2060,7 +2164,9 @@ bool MainWindow::flush_pending_edits() {
     const auto result = commit_current_task();
     if (result.status == SaveStatus::Saved) {
         markdown_editor_->mark_clean();
+        detail_source_hash_ = controller_.snapshot().tasks.at(current_task_id_).source_hash;
         autosave_paused_ = false;
+        save_feedback_->setText("Saved");
         statusBar()->showMessage("Saved");
         return true;
     }
@@ -2072,41 +2178,48 @@ bool MainWindow::flush_pending_edits() {
     return false;
 }
 
+TaskRecord MainWindow::edited_current_task() const {
+    auto task = controller_.snapshot().tasks.at(current_task_id_);
+    task.title = title_edit_->text().trimmed().toStdString();
+    task.body = markdown_editor_->markdown();
+    task.tags = parse_tags(tags_edit_->text());
+    Priority priority;
+    if (parse_priority(priority_edit_->currentText().toLower().toStdString(), priority)) task.priority = priority;
+    task.due_yaml = due_date_.isValid() ? due_date_.toString(Qt::ISODate).toStdString() : "null";
+    task.recurrence_yaml = staged_recurrence_yaml_.empty() ? "null" : staged_recurrence_yaml_;
+    task.reminders_yaml = staged_reminders_yaml_.empty() ? "[]" : staged_reminders_yaml_;
+    return task;
+}
+
 SaveResult MainWindow::commit_current_task() {
     if (read_only_ || current_task_id_.empty()) return {SaveStatus::Error, {}, "nothing to save"};
     const auto found = controller_.snapshot().tasks.find(current_task_id_);
     if (found == controller_.snapshot().tasks.end()) return {SaveStatus::Error, {}, "task is not in the workspace"};
-    auto task = found->second;
-    const auto title = title_edit_->text().trimmed();
-    if (title.isEmpty()) return {SaveStatus::Error, task.source_path, "task title cannot be empty"};
-    task.title = title.toStdString();
-    task.body = markdown_editor_->markdown();
-    task.tags = parse_tags(tags_edit_->text());
-    TaskStatus status;
-    Priority priority;
-    if (parse_task_status(status_edit_->currentText().toLower().replace(' ', '_').toStdString(), status)) task.status = status;
-    if (parse_priority(priority_edit_->currentText().toLower().toStdString(), priority)) task.priority = priority;
-    task.due_yaml = due_enabled_->isChecked() ? due_edit_->date().toString(Qt::ISODate).toStdString() : "null";
-    task.recurrence_yaml = staged_recurrence_yaml_.empty() ? "null" : staged_recurrence_yaml_;
-    task.reminders_yaml = staged_reminders_yaml_.empty() ? "[]" : staged_reminders_yaml_;
+    auto task = edited_current_task();
+    if (task.title.empty()) return {SaveStatus::Error, task.source_path, "task title cannot be empty"};
     statusBar()->showMessage("Saving");
+    save_feedback_->setText("Saving…");
     return controller_.save_task(std::move(task));
 }
 
 void MainWindow::apply_save_result(const SaveResult& result, bool interactive) {
     if (result.status == SaveStatus::Saved) {
         markdown_editor_->mark_clean();
+        detail_source_hash_ = controller_.snapshot().tasks.at(current_task_id_).source_hash;
         autosave_paused_ = false;
-        if (interactive) refresh_view();
+        refresh_view();
+        save_feedback_->setText("Saved");
         statusBar()->showMessage("Saved");
         return;
     }
     if (result.status == SaveStatus::Conflict) {
         autosave_paused_ = true;
+        save_feedback_->setText("Save conflict");
         if (interactive) QMessageBox::warning(this, "Save conflict", QString::fromStdString(result.message));
         else show_conflict_dialog();
         return;
     }
+    save_feedback_->setText("Save failed");
     statusBar()->showMessage(QString("Save failed: %1").arg(QString::fromStdString(result.message)));
     if (interactive) QMessageBox::critical(this, "Save failed", QString::fromStdString(result.message));
 }
@@ -2114,13 +2227,12 @@ void MainWindow::apply_save_result(const SaveResult& result, bool interactive) {
 void MainWindow::set_workspace_readonly(bool readonly) {
     read_only_ = readonly;
     if (markdown_editor_ != nullptr) markdown_editor_->set_editable(!readonly);
+    if (task_view_ != nullptr) { task_view_->setDragEnabled(!readonly); task_view_->setAcceptDrops(!readonly); }
+    if (due_button_ != nullptr) due_button_->setEnabled(!readonly);
+    if (tags_button_ != nullptr) tags_button_->setEnabled(!readonly);
     if (title_edit_ != nullptr) title_edit_->setReadOnly(readonly);
     if (tags_edit_ != nullptr) tags_edit_->setReadOnly(readonly);
-    if (due_enabled_ != nullptr) due_enabled_->setEnabled(!readonly);
-    if (due_edit_ != nullptr) {
-        due_edit_->setReadOnly(readonly);
-        due_edit_->setEnabled(!readonly && due_enabled_ != nullptr && due_enabled_->isChecked());
-    }
+    if (due_calendar_ != nullptr) due_calendar_->setEnabled(!readonly);
     if (status_edit_ != nullptr) status_edit_->setEnabled(!readonly);
     if (priority_edit_ != nullptr) priority_edit_->setEnabled(!readonly);
     if (recurrence_button_ != nullptr) recurrence_button_->setEnabled(!readonly);
@@ -2130,8 +2242,8 @@ void MainWindow::set_workspace_readonly(bool readonly) {
 
 void MainWindow::update_action_state() {
     const auto open = controller_.is_open();
-    const auto selected = open && !current_task_id_.empty()
-        && controller_.snapshot().tasks.contains(current_task_id_);
+    const TaskRecord* task = open ? find_task(controller_.snapshot(), current_task_id_) : nullptr;
+    const auto selected = task != nullptr;
     const auto writable = open && !read_only_;
     new_task_action_->setEnabled(writable);
     new_subtask_action_->setEnabled(writable && selected);
@@ -2144,6 +2256,12 @@ void MainWindow::update_action_state() {
     attach_action_->setEnabled(writable && selected);
     refresh_action_->setEnabled(open);
     settings_action_->setEnabled(writable);
+    set_transfer_actions_enabled(export_mdbase_action_, import_mdbase_action_,
+                                 open && writable, mdbase_transfer_in_progress_);
+    const bool done = task != nullptr && task->status == TaskStatus::Done;
+    complete_action_->setText(done ? "Reopen" : "Complete");
+    stop_repeating_action_->setEnabled(complete_action_->isEnabled() && has_recurrence(task));
+    update_selection_bar();
 }
 
 void MainWindow::find_in_context() {
@@ -2218,6 +2336,7 @@ std::string MainWindow::import_pasted_image(const QImage& image) {
         statusBar()->showMessage(QString::fromStdString(result.error));
         return {};
     }
+    update_detail_sections();
     schedule_autosave();
     return result.relative_link;
 }

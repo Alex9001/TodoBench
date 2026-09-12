@@ -1,0 +1,75 @@
+{
+  "name": "@callumalpass/mdbase",
+  "version": "0.3.0-rc.5",
+  "description": "TypeScript implementation of the mdbase specification",
+  "license": "MIT",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "conformance",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/callumalpass/mdbase.git"
+  },
+  "bugs": {
+    "url": "https://github.com/callumalpass/mdbase/issues"
+  },
+  "homepage": "https://github.com/callumalpass/mdbase#readme",
+  "bin": {
+    "mdb-profile": "dist/bin/mdb-profile.js"
+  },
+  "keywords": [
+    "markdown",
+    "sqlite",
+    "obsidian",
+    "knowledge-base",
+    "frontmatter",
+    "mdbase"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "sync:v03-schemas": "node scripts/sync-v03-schemas.mjs",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:conformance": "vitest run --reporter=verbose test/conformance.test.ts",
+    "test:testbed": "npm run build && node ../mdbase-spec/packages/testbed/src/cli.mjs run --adapter scripts/testbed-adapter.mjs --scenario core.shared-contract-consumers",
+    "test:package": "npm run build && node scripts/smoke-package.mjs",
+    "test:e2e": "npm run build && node scripts/e2e-package.mjs",
+    "package:consumer": "node scripts/pack-consumer-sdk.mjs",
+    "test:all": "npm test && npm run test:package && npm run test:e2e",
+    "profile": "npm run build && node dist/bin/mdb-profile.js"
+  },
+  "dependencies": {
+    "@bufbuild/cel": "^0.6.0",
+    "@bufbuild/protobuf": "^2.12.0",
+    "ajv": "^8.20.0",
+    "ajv-formats": "^3.0.1",
+    "gray-matter": "^4.0.3",
+    "js-yaml": "^4.3.0",
+    "picomatch": "^4.0.5",
+    "semver": "^7.8.5",
+    "sql.js": "^1.12.0",
+    "ulid": "^2.3.0",
+    "yaml": "^2.9.0"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.0",
+    "@types/node": "^22.0.0",
+    "@types/semver": "^7.7.1",
+    "@types/sql.js": "^1.4.9",
+    "typescript": "^5.5.0",
+    "vitest": "^4.1.10"
+  }
+}

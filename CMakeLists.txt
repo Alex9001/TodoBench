@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.24)
 
-project(TodoBench VERSION 0.1.1 LANGUAGES CXX)
+project(TodoBench VERSION 0.1.2 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -20,6 +20,7 @@ option(TODOBENCH_BUILD_TESTS "Build TodoBench tests" ON)
 find_package(Qt6 6.8 REQUIRED COMPONENTS Core Gui Widgets Svg Concurrent Test Network)
 find_package(yaml-cpp CONFIG REQUIRED)
 find_package(LibArchive REQUIRED)
+find_package(Threads REQUIRED)
 find_package(cmark-gfm CONFIG QUIET)
 find_package(cmark-gfm-extensions CONFIG QUIET)
 find_library(CMARK_EXTENSIONS_LIBRARY NAMES cmark-gfm-extensions)
@@ -46,6 +47,12 @@ add_library(todobench_core
     native/src/storage/sample_workspaces.cpp
     native/resources/workflows.qrc
     native/src/storage/settings_codec.cpp
+    native/src/storage/mdbase_bridge_client.cpp
+    native/src/storage/mdbase_transfer.cpp
+    native/src/storage/mdbase_export.cpp
+    native/src/storage/mdbase_import.cpp
+    native/src/storage/mdbase_markdown.cpp
+    native/src/storage/mdbase_graph.cpp
     native/src/storage/conflict_copy.cpp
     native/src/storage/schedule_validation.cpp
     native/src/storage/history_store.cpp
@@ -62,7 +69,68 @@ add_library(todobench_core
 )
 
 target_include_directories(todobench_core PUBLIC native/src)
-target_link_libraries(todobench_core PUBLIC Qt6::Core yaml-cpp::yaml-cpp LibArchive::LibArchive)
+# Rust bridge: compiled staticlib + C header under native/mdbase_bridge.
+# The bridge is built via Cargo (pinned 1.94.0, locked Cargo.lock) and linked
+# into the native process. No CLI/server/runtime is started.
+set(TODOBENCH_MDBASE_BRIDGE_MANIFEST "${CMAKE_SOURCE_DIR}/native/mdbase_bridge/Cargo.toml")
+set(TODOBENCH_MDBASE_BRIDGE_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/native/mdbase_bridge/include")
+find_program(CARGO_EXECUTABLE cargo)
+if(CARGO_EXECUTABLE)
+    file(GLOB_RECURSE TODOBENCH_MDBASE_BRIDGE_SOURCES CONFIGURE_DEPENDS
+        "${CMAKE_SOURCE_DIR}/native/mdbase_bridge/src/*.rs"
+        "${CMAKE_SOURCE_DIR}/native/mdbase_bridge/vendor/mdbase-rs/*.toml"
+        "${CMAKE_SOURCE_DIR}/native/mdbase_bridge/vendor/mdbase-rs/src/*.rs"
+        "${CMAKE_SOURCE_DIR}/native/mdbase_bridge/vendor/mdbase-rs/src/**/*.rs"
+    )
+    if(CMAKE_BUILD_TYPE STREQUAL "Release")
+        set(TODOBENCH_MDBASE_BRIDGE_PROFILE release)
+        set(TODOBENCH_MDBASE_BRIDGE_CARGO_ARGS --locked --release)
+    else()
+        set(TODOBENCH_MDBASE_BRIDGE_PROFILE debug)
+        set(TODOBENCH_MDBASE_BRIDGE_CARGO_ARGS --locked)
+    endif()
+    if(WIN32)
+        set(TODOBENCH_MDBASE_BRIDGE_LIB "${CMAKE_BINARY_DIR}/mdbase_bridge_target/${TODOBENCH_MDBASE_BRIDGE_PROFILE}/todobench_mdbase_bridge.lib")
+    else()
+        set(TODOBENCH_MDBASE_BRIDGE_LIB "${CMAKE_BINARY_DIR}/mdbase_bridge_target/${TODOBENCH_MDBASE_BRIDGE_PROFILE}/libtodobench_mdbase_bridge.a")
+    endif()
+    add_custom_command(
+        OUTPUT "${TODOBENCH_MDBASE_BRIDGE_LIB}"
+        COMMAND "${CMAKE_COMMAND}" -E env
+                "CARGO_TARGET_DIR=${CMAKE_BINARY_DIR}/mdbase_bridge_target"
+                "${CARGO_EXECUTABLE}" +1.94.0 build --manifest-path "${TODOBENCH_MDBASE_BRIDGE_MANIFEST}" ${TODOBENCH_MDBASE_BRIDGE_CARGO_ARGS}
+        DEPENDS "${TODOBENCH_MDBASE_BRIDGE_MANIFEST}"
+                "${CMAKE_SOURCE_DIR}/native/mdbase_bridge/src/lib.rs"
+                "${CMAKE_SOURCE_DIR}/native/mdbase_bridge/Cargo.lock"
+                "${CMAKE_SOURCE_DIR}/native/mdbase_bridge/rust-toolchain.toml"
+                "${CMAKE_SOURCE_DIR}/native/mdbase_bridge/include/todobench_mdbase_bridge.h"
+                ${TODOBENCH_MDBASE_BRIDGE_SOURCES}
+        COMMENT "Building todobench-mdbase-bridge (${TODOBENCH_MDBASE_BRIDGE_PROFILE}, locked)"
+        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/native/mdbase_bridge"
+        VERBATIM
+    )
+    add_custom_target(todobench_mdbase_bridge_build ALL DEPENDS "${TODOBENCH_MDBASE_BRIDGE_LIB}")
+    add_library(todobench_mdbase_bridge STATIC IMPORTED GLOBAL)
+    set_target_properties(todobench_mdbase_bridge PROPERTIES
+        IMPORTED_LOCATION "${TODOBENCH_MDBASE_BRIDGE_LIB}"
+        INTERFACE_INCLUDE_DIRECTORIES "${TODOBENCH_MDBASE_BRIDGE_INCLUDE_DIR}"
+    )
+    add_dependencies(todobench_mdbase_bridge todobench_mdbase_bridge_build)
+    # Native libraries required by Rust's staticlib output.
+    if(UNIX AND NOT APPLE)
+        set_property(TARGET todobench_mdbase_bridge PROPERTY INTERFACE_LINK_LIBRARIES Threads::Threads dl m)
+    elseif(APPLE)
+        set_property(TARGET todobench_mdbase_bridge PROPERTY INTERFACE_LINK_LIBRARIES Threads::Threads)
+    elseif(WIN32)
+        set_property(TARGET todobench_mdbase_bridge PROPERTY INTERFACE_LINK_LIBRARIES
+            advapi32 bcrypt crypt32 ntdll userenv ws2_32)
+    endif()
+else()
+    message(FATAL_ERROR "cargo not found: Rust 1.94.0 is required to build the bundled mdbase bridge")
+endif()
+
+target_include_directories(todobench_core PUBLIC native/src)
+target_link_libraries(todobench_core PUBLIC Qt6::Core yaml-cpp::yaml-cpp LibArchive::LibArchive todobench_mdbase_bridge)
 target_compile_features(todobench_core PUBLIC cxx_std_20)
 if(TARGET libcmark-gfm AND TARGET libcmark-gfm-extensions)
     target_compile_definitions(todobench_core PRIVATE TODOBENCH_HAS_CMARK=1)
@@ -92,17 +160,22 @@ add_library(todobench_theme
 )
 target_link_libraries(todobench_theme PUBLIC todobench_core Qt6::Widgets)
 
+add_library(todobench_task_presentation native/src/app/task_presentation.cpp)
+target_link_libraries(todobench_task_presentation PUBLIC todobench_core Qt6::Widgets)
+
 add_executable(TodoBench
     native/src/app/main.cpp
     native/src/app/workspace_controller.cpp
     native/src/app/main_window.cpp
+    native/src/app/main_window_context.cpp
     native/src/app/onboarding_wizard.cpp
+    native/src/app/mdbase_transfer_wizard.cpp
     native/src/app/markdown_editor.cpp
     native/src/app/task_schedule_editor.cpp
     native/src/app/settings_dialog.cpp
     native/src/app/instance_guard.cpp
 )
-target_link_libraries(TodoBench PRIVATE todobench_theme Qt6::Gui Qt6::Widgets Qt6::Network)
+target_link_libraries(TodoBench PRIVATE todobench_task_presentation todobench_theme Qt6::Gui Qt6::Widgets Qt6::Network Qt6::Concurrent)
 set_target_properties(TodoBench PROPERTIES
     WIN32_EXECUTABLE TRUE
     MACOSX_BUNDLE TRUE
@@ -111,6 +184,26 @@ set_target_properties(TodoBench PROPERTIES
 
 include(CTest)
 if(TODOBENCH_BUILD_TESTS)
+    find_program(NPM_EXECUTABLE npm REQUIRED)
+    set(TODOBENCH_MDBASE_ORACLE_ROOT "${CMAKE_SOURCE_DIR}/native/mdbase_oracle/ts")
+    file(GLOB_RECURSE TODOBENCH_MDBASE_ORACLE_SOURCES CONFIGURE_DEPENDS
+        "${TODOBENCH_MDBASE_ORACLE_ROOT}/src/*.ts"
+        "${TODOBENCH_MDBASE_ORACLE_ROOT}/scripts/*.mjs"
+    )
+    add_custom_command(
+        OUTPUT "${TODOBENCH_MDBASE_ORACLE_ROOT}/dist/index.js"
+        COMMAND "${NPM_EXECUTABLE}" ci --ignore-scripts
+        COMMAND "${NPM_EXECUTABLE}" run build
+        WORKING_DIRECTORY "${TODOBENCH_MDBASE_ORACLE_ROOT}"
+        DEPENDS "${TODOBENCH_MDBASE_ORACLE_ROOT}/package.json"
+                "${TODOBENCH_MDBASE_ORACLE_ROOT}/package-lock.json"
+                "${TODOBENCH_MDBASE_ORACLE_ROOT}/tsconfig.json"
+                ${TODOBENCH_MDBASE_ORACLE_SOURCES}
+        COMMENT "Building pinned TypeScript mdbase interoperability oracle"
+        VERBATIM
+    )
+    add_custom_target(mdbase_oracle_build ALL
+        DEPENDS "${TODOBENCH_MDBASE_ORACLE_ROOT}/dist/index.js")
     enable_testing()
     find_package(Python3 REQUIRED COMPONENTS Interpreter)
     add_executable(test_interoperability native/tests/test_interoperability.cpp native/src/app/markdown_editor.cpp)
@@ -194,18 +287,70 @@ if(TODOBENCH_BUILD_TESTS)
     target_compile_features(test_task_schedule_editor PRIVATE cxx_std_20)
     add_test(NAME test_task_schedule_editor COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/run-qt-test.py $<TARGET_FILE:test_task_schedule_editor>)
 
+    add_executable(test_task_presentation native/tests/test_task_presentation.cpp)
+    target_link_libraries(test_task_presentation PRIVATE todobench_task_presentation Qt6::Test)
+    add_test(NAME test_task_presentation COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/run-qt-test.py $<TARGET_FILE:test_task_presentation>)
+    set_tests_properties(test_task_presentation PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
     add_executable(test_main_window
         native/tests/test_main_window.cpp
         native/src/app/main_window.cpp
+        native/src/app/main_window_context.cpp
         native/src/app/onboarding_wizard.cpp
+        native/src/app/mdbase_transfer_wizard.cpp
         native/src/app/markdown_editor.cpp
         native/src/app/task_schedule_editor.cpp
         native/src/app/settings_dialog.cpp
         native/src/app/workspace_controller.cpp
     )
-    target_link_libraries(test_main_window PRIVATE todobench_theme Qt6::Gui Qt6::Widgets Qt6::Network Qt6::Test)
+    target_link_libraries(test_main_window PRIVATE todobench_task_presentation todobench_theme Qt6::Gui Qt6::Widgets Qt6::Network Qt6::Concurrent Qt6::Test)
     target_compile_features(test_main_window PRIVATE cxx_std_20)
     add_test(NAME test_main_window COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/run-qt-test.py $<TARGET_FILE:test_main_window>)
+
+    add_executable(test_mdbase_bridge native/tests/test_mdbase_bridge.cpp)
+    target_link_libraries(test_mdbase_bridge PRIVATE todobench_core Qt6::Test)
+    target_compile_features(test_mdbase_bridge PRIVATE cxx_std_20)
+    add_test(NAME test_mdbase_bridge COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/run-qt-test.py $<TARGET_FILE:test_mdbase_bridge>)
+
+    add_executable(test_mdbase_export native/tests/test_mdbase_export.cpp)
+    target_link_libraries(test_mdbase_export PRIVATE todobench_core Qt6::Test)
+    target_sources(test_mdbase_export PRIVATE native/src/app/workspace_controller.cpp)
+    target_compile_features(test_mdbase_export PRIVATE cxx_std_20)
+    add_test(NAME test_mdbase_export COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/run-qt-test.py $<TARGET_FILE:test_mdbase_export>)
+
+    add_executable(test_mdbase_transfer native/tests/test_mdbase_transfer.cpp)
+    target_link_libraries(test_mdbase_transfer PRIVATE todobench_core Qt6::Test)
+    target_sources(test_mdbase_transfer PRIVATE native/src/app/workspace_controller.cpp)
+    target_compile_features(test_mdbase_transfer PRIVATE cxx_std_20)
+    add_test(NAME test_mdbase_transfer COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/run-qt-test.py $<TARGET_FILE:test_mdbase_transfer>)
+
+    add_executable(test_mdbase_wizard
+        native/tests/test_mdbase_wizard.cpp
+        native/src/app/mdbase_transfer_wizard.cpp
+    )
+    target_link_libraries(test_mdbase_wizard PRIVATE todobench_core Qt6::Widgets Qt6::Concurrent Qt6::Test)
+    target_compile_features(test_mdbase_wizard PRIVATE cxx_std_20)
+    add_test(NAME test_mdbase_wizard COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/run-qt-test.py $<TARGET_FILE:test_mdbase_wizard>)
+
+    add_executable(test_mdbase_matrix native/tests/test_mdbase_matrix.cpp)
+    target_link_libraries(test_mdbase_matrix PRIVATE todobench_core Qt6::Test)
+    target_sources(test_mdbase_matrix PRIVATE native/src/app/workspace_controller.cpp)
+    target_compile_features(test_mdbase_matrix PRIVATE cxx_std_20)
+    add_test(NAME test_mdbase_matrix COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/run-qt-test.py $<TARGET_FILE:test_mdbase_matrix>)
+    add_executable(mdbase_transfer_driver native/tests/mdbase_transfer_driver.cpp)
+    target_link_libraries(mdbase_transfer_driver PRIVATE todobench_core Qt6::Core)
+    target_sources(mdbase_transfer_driver PRIVATE native/src/app/workspace_controller.cpp)
+    target_compile_features(mdbase_transfer_driver PRIVATE cxx_std_20)
+    # Oracle verification: independent TS implementation (pinned 885c4f) exercises same fixtures.
+    # Must not be silently skipped if oracle is missing.
+    add_test(NAME mdbase_oracle_interop
+        COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/mdbase-oracle-verify.py
+                --oracle-root ${CMAKE_SOURCE_DIR}/native/mdbase_oracle/ts
+                --minimal-fixture ${CMAKE_SOURCE_DIR}/native/tests/fixtures/mdbase-v03-minimal
+                --invalid-fixture ${CMAKE_SOURCE_DIR}/native/tests/fixtures/mdbase-v03-invalid
+                --transfer-driver $<TARGET_FILE:mdbase_transfer_driver>
+    )
+    set_tests_properties(mdbase_oracle_interop PROPERTIES TIMEOUT 90)
 
     set_tests_properties(
         test_front_matter
@@ -223,6 +368,9 @@ if(TODOBENCH_BUILD_TESTS)
         test_theme
         test_task_schedule_editor
         test_main_window
+        test_mdbase_bridge
+        test_mdbase_export
+        test_mdbase_transfer
         PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
     )
 endif()

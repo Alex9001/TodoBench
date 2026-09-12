@@ -162,6 +162,8 @@ workspace-owned, including UI preferences. Preserve unknown nested values.
 | `window_width` | integer pixels, minimum 900 | 1280 |
 | `window_height` | integer pixels, minimum 600 | 820 |
 | `task_pane_width` | integer pixels, minimum 300 | 500 |
+| `details_visible` | boolean | true |
+| `details_pane_width` | integer pixels, minimum 360 | 600 |
 | `toolbar_visible` | boolean | true |
 | `saved_views` | array of saved-view objects | `[]` |
 | `open_view_tabs` | array of open-tab objects | `[]` |
@@ -175,10 +177,19 @@ workspace-owned, including UI preferences. Preserve unknown nested values.
 
 Saved view: `name` string (empty entries ignored), `filter_expression` string
 (default empty), `sort` string (default `manual`; also `title`, `priority`, `due`,
-`created`, `updated`). Open tabs add `selected_task_id` string (empty),
-`scroll_value` integer (0), and `all_tasks` boolean (false). Filters use the
-TodoBench filter syntax (`native/src/domain/filter.cpp`); another client may retain
-an expression without evaluating it.
+`created`, `updated`), `layout` string (`list` or `table`, default `list`),
+`hidden_columns` sequence of integer column IDs (1–5; invalid entries ignored),
+and `expanded_task_ids` sequence of nonempty task IDs (default empty). Open tabs
+add `selected_task_id` string (empty), `scroll_value` integer (0), `all_tasks`
+boolean (false), and the same layout, hidden-column, and expanded-task fields.
+Both saved views and open tabs support the `expansion_initialized` boolean;
+when false, clients retain the legacy behavior of treating all branches as
+expanded, while true makes the expanded-task list authoritative. Open tabs
+default to false. Saved views without the flag default to true if an
+`expanded_task_ids` field is present (including an intentionally empty list),
+and false for older views without that field. Filters use the TodoBench filter syntax
+(`native/src/domain/filter.cpp`); another client may retain an expression without
+evaluating it.
 
 Keyboard binding: `command_id` string (empty entries ignored), `shortcut`
 Qt portable key-sequence string (empty), `context` string (`global` by default).

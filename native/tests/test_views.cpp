@@ -4,6 +4,10 @@
 #include "domain/keyboard_bindings.h"
 #include "storage/settings_codec.h"
 
+#include <QFile>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QTemporaryDir>
 #include <QTest>
 
@@ -16,6 +20,11 @@ class ViewsTest final : public QObject {
 private slots:
     void settingsRoundTripSavedViews();
     void settingsRoundTripOpenViewTabs();
+    void missingViewPreferencesUseDefaults();
+    void viewPreferencesRoundTrip();
+    void savedViewEmptyExpansionStateRoundTrips();
+    void invalidViewPreferencesUseSafeDefaults();
+    void viewPreferenceExtensionsSurviveEdits();
     void titleSortUsesStableIdTieBreaker();
     void prioritySortPlacesUrgentFirst();
     void formattingRulesUseFirstPropertyOwner();
@@ -70,6 +79,120 @@ bool appearance_settings_match(const Settings& restored) {
         && restored.window_width == 1440 && restored.window_height == 900
         && restored.task_pane_width == 560 && !restored.toolbar_visible;
 }
+
+bool missing_view_preferences_use_defaults() {
+    QTemporaryDir temporary;
+    if (!temporary.isValid()) return false;
+    const auto path = temporary.filePath("settings.json");
+    QFile file(path);
+    if (!file.open(QIODevice::WriteOnly)) return false;
+    if (file.write(R"({"schema_version":1,"saved_views":[{"name":"Legacy","sort":"manual"}],"open_view_tabs":[{"name":"Legacy"}]})") <= 0) return false;
+    file.close();
+    const auto loaded = load_settings(path.toStdString());
+    if (!std::holds_alternative<Settings>(loaded)) return false;
+    const auto& settings = std::get<Settings>(loaded);
+    return settings.details_visible && settings.details_pane_width == 600
+        && settings.saved_views.size() == 1 && settings.saved_views[0].layout == "list"
+        && settings.saved_views[0].hidden_columns.empty() && settings.saved_views[0].expanded_task_ids.empty()
+        && !settings.saved_views[0].expansion_initialized
+        && settings.open_view_tabs.size() == 1 && settings.open_view_tabs[0].layout == "list"
+        && !settings.open_view_tabs[0].expansion_initialized;
+}
+
+bool view_preferences_round_trip() {
+    QTemporaryDir temporary;
+    if (!temporary.isValid()) return false;
+    Settings settings;
+    settings.details_visible = false;
+    settings.details_pane_width = 840;
+    SavedView saved;
+    saved.name = "Table view";
+    saved.layout = "table";
+    saved.hidden_columns = {1, 3, 5};
+    saved.expanded_task_ids = {"parent", "child"};
+    saved.expansion_initialized = true;
+    settings.saved_views = {saved};
+    OpenViewTab tab;
+    tab.name = "Open table";
+    tab.layout = "table";
+    tab.hidden_columns = {2, 4};
+    tab.expanded_task_ids = {"parent"};
+    tab.expansion_initialized = true;
+    settings.open_view_tabs = {tab};
+    std::string error;
+    if (!save_settings(temporary.filePath("settings.json").toStdString(), settings, error)) return false;
+    const auto loaded = load_settings(temporary.filePath("settings.json").toStdString());
+    if (!std::holds_alternative<Settings>(loaded)) return false;
+    const auto& restored = std::get<Settings>(loaded);
+    return !restored.details_visible && restored.details_pane_width == 840
+        && restored.saved_views.size() == 1 && restored.saved_views[0].layout == "table"
+        && restored.saved_views[0].hidden_columns == std::vector<int>({1, 3, 5})
+        && restored.saved_views[0].expanded_task_ids == std::vector<std::string>({"parent", "child"})
+        && restored.saved_views[0].expansion_initialized
+        && restored.open_view_tabs.size() == 1 && restored.open_view_tabs[0].layout == "table"
+        && restored.open_view_tabs[0].hidden_columns == std::vector<int>({2, 4})
+        && restored.open_view_tabs[0].expanded_task_ids == std::vector<std::string>({"parent"})
+        && restored.open_view_tabs[0].expansion_initialized;
+}
+
+bool saved_view_empty_expansion_state_round_trips() {
+    QTemporaryDir temporary;
+    if (!temporary.isValid()) return false;
+    const auto path = temporary.filePath("settings.json");
+    QFile file(path);
+    if (!file.open(QIODevice::WriteOnly)) return false;
+    if (file.write(R"({"schema_version":1,"saved_views":[{"name":"Collapsed","expanded_task_ids":[]}]})") <= 0) return false;
+    file.close();
+    const auto loaded = load_settings(path.toStdString());
+    if (!std::holds_alternative<Settings>(loaded)) return false;
+    const auto& settings = std::get<Settings>(loaded);
+    return settings.saved_views.size() == 1 && settings.saved_views[0].expanded_task_ids.empty()
+        && settings.saved_views[0].expansion_initialized;
+}
+
+bool invalid_view_preferences_use_safe_defaults() {
+    QTemporaryDir temporary;
+    if (!temporary.isValid()) return false;
+    const auto path = temporary.filePath("settings.json");
+    QFile file(path);
+    if (!file.open(QIODevice::WriteOnly)) return false;
+    if (file.write(R"({"schema_version":1,"details_pane_width":100,"saved_views":[{"name":"Bad","layout":"grid","hidden_columns":[0,1,1,2.5,6,"3"]}],"open_view_tabs":[{"name":"Bad","layout":"kanban","hidden_columns":[-1,5,9]}]})") <= 0) return false;
+    file.close();
+    const auto loaded = load_settings(path.toStdString());
+    if (!std::holds_alternative<Settings>(loaded)) return false;
+    const auto& settings = std::get<Settings>(loaded);
+    return settings.details_pane_width == 360 && settings.saved_views.size() == 1
+        && settings.saved_views[0].layout == "list"
+        && settings.saved_views[0].hidden_columns == std::vector<int>({1})
+        && settings.open_view_tabs.size() == 1 && settings.open_view_tabs[0].layout == "list"
+        && settings.open_view_tabs[0].hidden_columns == std::vector<int>({5});
+}
+
+bool view_preference_extensions_survive_edits() {
+    QTemporaryDir temporary;
+    if (!temporary.isValid()) return false;
+    const auto path = temporary.filePath("settings.json");
+    QFile file(path);
+    if (!file.open(QIODevice::WriteOnly)) return false;
+    if (file.write(R"({"schema_version":1,"x-settings":{"keep":[1,true]},"saved_views":[{"name":"View","sort":"manual","x-view":{"keep":"saved"}}],"open_view_tabs":[{"name":"Tab","x-tab":{"keep":"tab"}}]})") <= 0) return false;
+    file.close();
+    auto loaded = load_settings(path.toStdString());
+    if (!std::holds_alternative<Settings>(loaded)) return false;
+    auto settings = std::get<Settings>(std::move(loaded));
+    settings.workspace_name = "Edited";
+    settings.saved_views[0].layout = "table";
+    settings.open_view_tabs[0].expansion_initialized = true;
+    std::string error;
+    if (!save_settings(path.toStdString(), settings, error)) return false;
+    QFile result_file(path);
+    if (!result_file.open(QIODevice::ReadOnly)) return false;
+    QJsonParseError parse_error;
+    const auto object = QJsonDocument::fromJson(result_file.readAll(), &parse_error).object();
+    return parse_error.error == QJsonParseError::NoError
+        && object.value("x-settings").toObject().value("keep").toArray()[1].toBool()
+        && object.value("saved_views").toArray()[0].toObject().value("x-view").toObject().value("keep").toString() == "saved"
+        && object.value("open_view_tabs").toArray()[0].toObject().value("x-tab").toObject().value("keep").toString() == "tab";
+}
 }
 
 void ViewsTest::settingsRoundTripOpenViewTabs() {
@@ -83,6 +206,26 @@ void ViewsTest::settingsRoundTripOpenViewTabs() {
     const auto loaded = load_settings(temporary.filePath("settings.json").toStdString());
     QVERIFY(std::holds_alternative<Settings>(loaded));
     QVERIFY(open_view_tab_matches(std::get<Settings>(loaded)));
+}
+
+void ViewsTest::missingViewPreferencesUseDefaults() {
+    QVERIFY(missing_view_preferences_use_defaults());
+}
+
+void ViewsTest::viewPreferencesRoundTrip() {
+    QVERIFY(view_preferences_round_trip());
+}
+
+void ViewsTest::savedViewEmptyExpansionStateRoundTrips() {
+    QVERIFY(saved_view_empty_expansion_state_round_trips());
+}
+
+void ViewsTest::invalidViewPreferencesUseSafeDefaults() {
+    QVERIFY(invalid_view_preferences_use_safe_defaults());
+}
+
+void ViewsTest::viewPreferenceExtensionsSurviveEdits() {
+    QVERIFY(view_preference_extensions_survive_edits());
 }
 
 void ViewsTest::appearanceSettingsRoundTrip() {

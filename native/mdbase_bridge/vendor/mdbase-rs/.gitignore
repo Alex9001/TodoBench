@@ -1,0 +1,11 @@
+target/
+/mdbase-spec/
+
+PROMPT.md
+AGENTS.md
+PROGRESS.md
+loop.sh
+
+# Test artifacts
+.mdbase-test-*/
+/.ops/

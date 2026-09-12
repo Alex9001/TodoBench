@@ -1,15 +1,18 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "app/onboarding_wizard.h"
 #include "app/theme.h"
+#include <QAccessible>
 #include <QComboBox>
 #include <QFileDialog>
 #include <QFormLayout>
+#include <QFrame>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QLineEdit>
 #include <QListWidget>
 #include <QPushButton>
 #include <QRadioButton>
+#include <QStyle>
 #include <QVBoxLayout>
 #include <QDir>
 
@@ -37,6 +40,30 @@ QLabel* paragraph(const QString& text, QVBoxLayout* layout) {
     label->setWordWrap(true);
     layout->addWidget(label);
     return label;
+}
+QWidget* error_banner(QLabel*& message, QVBoxLayout* layout) {
+    auto* frame = new QFrame;
+    frame->setObjectName("setupErrorBanner");
+    frame->setFrameShape(QFrame::StyledPanel);
+    frame->setAutoFillBackground(true);
+    frame->setBackgroundRole(QPalette::AlternateBase);
+    auto* row = new QHBoxLayout(frame);
+    auto* icon = new QLabel(frame);
+    icon->setPixmap(frame->style()->standardIcon(QStyle::SP_MessageBoxWarning).pixmap(32, 32));
+    row->addWidget(icon, 0, Qt::AlignTop);
+    auto* text = new QVBoxLayout;
+    auto* heading = paragraph("Workspace setup couldn't finish", text);
+    auto font = heading->font();
+    font.setBold(true);
+    heading->setFont(font);
+    message = paragraph({}, text);
+    message->setObjectName("setupError");
+    message->setFocusPolicy(Qt::StrongFocus);
+    message->setTextInteractionFlags(Qt::TextSelectableByMouse | Qt::TextSelectableByKeyboard);
+    row->addLayout(text, 1);
+    layout->addWidget(frame);
+    frame->hide();
+    return frame;
 }
 QString location_problem(const WorkspaceSetup& setup) {
     if (setup.directory.empty()) return "Choose a workspace folder.";
@@ -194,11 +221,10 @@ void OnboardingWizard::update_preview() {
 void OnboardingWizard::create_review() {
     auto* page = make_page(*this, Review, "Ready when you are", "Review the destination, then take your first step.");
     auto* layout = new QVBoxLayout(page);
+    finish_error_banner_ = error_banner(finish_error_, layout);
     summary_ = paragraph({}, layout);
     summary_->setObjectName("setupSummary");
     paragraph("Your first steps\n\n1. Select a task to read or edit its notes. Changes save automatically.\n2. Use New Task to capture your own work, and Complete / Reopen to finish it.\n3. Use Open tab… beside the tabs for projects and saved views.\n4. Type words in the filter to find tasks instantly.\n\nSamples are ordinary, editable tasks. Move examples to Trash when you're ready; you can restore them later. File → Export Workspace creates a backup of the whole folder.", layout);
-    finish_error_ = paragraph({}, layout);
-    finish_error_->setObjectName("setupError");
     layout->addStretch();
     page->setFinalPage(true);
 }
@@ -235,12 +261,21 @@ void OnboardingWizard::update_review() {
     summary_->setText(summary + "\n\nTodoBench will reopen this workspace on your next launch.");
     setButtonText(QWizard::FinishButton, setup.open_existing ? "Open workspace" : "Create workspace");
     finish_error_->clear();
+    finish_error_banner_->hide();
+}
+
+void OnboardingWizard::show_finish_error(const QString& error) {
+    finish_error_->setText(error.isEmpty() ? "The workspace could not be opened. Check the folder and try again." : error);
+    finish_error_banner_->show();
+    finish_error_->setFocus(Qt::OtherFocusReason);
+    QAccessibleEvent event(finish_error_, QAccessible::Alert);
+    QAccessible::updateAccessibility(&event);
 }
 
 void OnboardingWizard::accept() {
-    if (!validate_location()) { finish_error_->setText(location_error_->text()); return; }
+    if (!validate_location()) { show_finish_error(location_error_->text()); return; }
     QString error;
-    if (!commit_(selection(), error)) { finish_error_->setText(error); return; }
+    if (!commit_(selection(), error)) { show_finish_error(error); return; }
     QWizard::accept();
 }
 }  // namespace todobench

@@ -25,7 +25,7 @@ public:
     bool refresh(std::string& error);
     bool create_task(const std::string& project_id, const std::string& title, std::string& task_id, std::string& error);
     bool create_subtask(const std::string& parent_id, const std::string& title, std::string& task_id, std::string& error);
-    bool set_task_status(const std::string& task_id, TaskStatus status, std::string& error);
+    bool set_task_status(const std::string& task_id, TaskStatus status, std::string& error, bool restore_previous = true);
     bool complete_task(const std::string& task_id, bool complete_branch, std::string& error);
     bool complete_and_stop_repeating(const std::string& task_id, bool complete_branch, std::string& error);
     bool bulk_set_status(const std::vector<std::string>& task_ids, TaskStatus status, std::string& error);

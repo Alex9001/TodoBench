@@ -6,6 +6,13 @@ runs:
     - uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
       with:
         python-version: '3.12'
+    - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+      with:
+        node-version: '22'
+        cache: npm
+        cache-dependency-path: native/mdbase_oracle/ts/package-lock.json
+    - shell: bash
+      run: rustup toolchain install 1.94.0 --profile minimal
     - shell: bash
       run: python -m pip install -r requirements-dev.txt
     - uses: jurplel/install-qt-action@48d3ad6db93f3627c8ee7a0454bc6f3744f7e730 # v4.3.1

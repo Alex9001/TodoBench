@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "app/workspace_controller.h"
+#include "domain/recurrence.h"
 #include "storage/front_matter_codec.h"
 #include "storage/workspace_store.h"
 
@@ -16,6 +17,7 @@ using namespace todobench;
 class TaskCommandsTest final : public QObject {
     Q_OBJECT
 private slots:
+    void explicitStatusAndBulkWaitingRespectChosenState();
     void hierarchyAndBulkCommandsPersist();
     void recurringCompletionSnapshotsAndAdvances();
     void duplicateProjectAndBranchCompletionPersist();
@@ -56,7 +58,18 @@ bool recurring_completion_advances(const std::filesystem::path& root) {
     if (controller.save_task(task).status != SaveStatus::Saved) return false;
     if (!controller.complete_task(task_id, false, error)) return false;
     const auto& recurring = controller.snapshot().tasks.at(task_id);
-    return recurring.status == TaskStatus::Todo && recurring.due_yaml == "2026-09-11"
+    // Fixed-calendar recurrence skips missed occurrences *through* completion date (inclusive).
+    // Completion date is "now" (today), so expected next due depends on current date.
+    // Compute expected via the same recurrence engine to avoid date-sensitive hardcoding.
+    RecurrenceRule rule;
+    rule.enabled = true;
+    rule.unit = RecurrenceUnit::Weeks;
+    rule.interval = 1;
+    const auto anchor = QDateTime(QDate(2026, 9, 4), QTime(9, 0), QTimeZone("UTC"));
+    const auto completion = QDateTime::currentDateTimeUtc();
+    const auto expected = next_occurrence(rule, anchor, completion);
+    const auto expected_yaml = expected.date().toString(Qt::ISODate).toStdString();
+    return recurring.status == TaskStatus::Todo && recurring.due_yaml == expected_yaml
         && recurring.completed_at.empty() && history_markdown_count(root) == 1;
 }
 
@@ -204,8 +217,18 @@ bool recurring_completion_undo_restores(const std::filesystem::path& root) {
     task.recurrence_yaml = "enabled: true\nmode: fixed_calendar\ninterval: 1\nunit: weeks\n";
     if (controller.save_task(task).status != SaveStatus::Saved) return false;
     if (!controller.complete_task(task_id, false, error)) return false;
-    if (controller.snapshot().tasks.at(task_id).status != TaskStatus::Todo
-        || controller.snapshot().tasks.at(task_id).due_yaml != "2026-09-11") return false;
+    {
+        RecurrenceRule rule;
+        rule.enabled = true;
+        rule.unit = RecurrenceUnit::Weeks;
+        rule.interval = 1;
+        const auto anchor = QDateTime(QDate(2026, 9, 4), QTime(9, 0), QTimeZone("UTC"));
+        const auto completion = QDateTime::currentDateTimeUtc();
+        const auto expected = next_occurrence(rule, anchor, completion);
+        const auto expected_yaml = expected.date().toString(Qt::ISODate).toStdString();
+        if (controller.snapshot().tasks.at(task_id).status != TaskStatus::Todo
+            || controller.snapshot().tasks.at(task_id).due_yaml != expected_yaml) return false;
+    }
     if (!controller.undo_last_completion(error)) return false;
     const auto restored = controller.snapshot().tasks.at(task_id);
     return restored.status == TaskStatus::Todo && restored.due_yaml == "2026-09-04"
@@ -244,7 +267,18 @@ bool recurring_branch_reset_works(const std::filesystem::path& root) {
     if (!controller.complete_task(parent_id, true, error)) return false;
     const auto& reset_parent = controller.snapshot().tasks.at(parent_id);
     const auto& reset_child = controller.snapshot().tasks.at(child_id);
-    const auto result = reset_parent.status == TaskStatus::Todo && reset_parent.due_yaml == "2026-09-11"
+    {
+        RecurrenceRule rule;
+        rule.enabled = true;
+        rule.unit = RecurrenceUnit::Weeks;
+        rule.interval = 1;
+        const auto anchor = QDateTime(QDate(2026, 9, 4), QTime(9, 0), QTimeZone("UTC"));
+        const auto completion = QDateTime::currentDateTimeUtc();
+        const auto expected = next_occurrence(rule, anchor, completion);
+        const auto expected_yaml = expected.date().toString(Qt::ISODate).toStdString();
+        if (reset_parent.due_yaml != expected_yaml) return false;
+    }
+    const auto result = reset_parent.status == TaskStatus::Todo
         && reset_parent.body.find("- [ ] Parent item") != std::string::npos
         && reset_child.status == TaskStatus::InProgress && reset_child.completed_at.empty()
         && reset_child.body.find("- [ ] Child item") != std::string::npos
@@ -292,6 +326,40 @@ void TaskCommandsTest::completeAndStopRepeatingRemovesRule() {
     const auto& completed = controller.snapshot().tasks.at(task_id);
     QCOMPARE(completed.status, TaskStatus::Done);
     QCOMPARE(QString::fromStdString(completed.recurrence_yaml), QString("null"));
+}
+
+namespace {
+bool reopening_restores_previous_status(WorkspaceController& controller, const std::string& id) {
+    std::string error;
+    if (!controller.set_task_status(id, TaskStatus::InProgress, error)) return false;
+    if (!controller.complete_task(id, false, error)) return false;
+    if (!controller.set_task_status(id, TaskStatus::Todo, error)) return false;
+    return controller.snapshot().tasks.at(id).status == TaskStatus::InProgress;
+}
+
+bool explicit_status_respects_choice(WorkspaceController& controller, const std::string& id) {
+    std::string error;
+    if (!controller.complete_task(id, false, error)) return false;
+    if (!controller.set_task_status(id, TaskStatus::Todo, error, false)) return false;
+    if (controller.snapshot().tasks.at(id).status != TaskStatus::Todo) return false;
+    if (!controller.complete_task(id, false, error)) return false;
+    if (!controller.bulk_set_status({id}, TaskStatus::Waiting, error)) return false;
+    if (!controller.refresh(error)) return false;
+    return controller.snapshot().tasks.at(id).status == TaskStatus::Waiting
+        && controller.snapshot().tasks.at(id).completed_at.empty();
+}
+}
+
+void TaskCommandsTest::explicitStatusAndBulkWaitingRespectChosenState() {
+    QTemporaryDir temporary;
+    WorkspaceController controller;
+    std::string error;
+    const auto root = std::filesystem::path(temporary.path().toStdString()) / "status";
+    QVERIFY(controller.create_workspace(root, "Status", error));
+    std::string id;
+    QVERIFY(controller.create_task(controller.snapshot().projects.begin()->first, "Task", id, error));
+    QVERIFY(reopening_restores_previous_status(controller, id));
+    QVERIFY(explicit_status_respects_choice(controller, id));
 }
 
 QTEST_MAIN(TaskCommandsTest)

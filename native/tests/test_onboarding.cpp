@@ -103,8 +103,16 @@ void OnboardingTest::failedCreationKeepsWizardOpen() {
     wizard.next();
     wizard.next();
     wizard.button(QWizard::FinishButton)->click();
+    QApplication::processEvents();
     QVERIFY(wizard.isVisible());
-    QCOMPARE(wizard.findChild<QLabel*>("setupError")->text(), QString("Disk is full"));
+    auto* error = wizard.findChild<QLabel*>("setupError");
+    QCOMPARE(error->text(), QString("Disk is full"));
+    QVERIFY(error->isVisible() && error->hasFocus());
+    const auto screenshots = qEnvironmentVariable("TODOBENCH_ONBOARDING_SCREENSHOTS");
+    if (!screenshots.isEmpty()) {
+        QDir().mkpath(screenshots);
+        QVERIFY(wizard.grab().save(screenshots + "/creation-error.png"));
+    }
 }
 bool save_workflow_screenshots(OnboardingWizard& wizard, const QString& screenshots) {
     auto* choices = wizard.findChild<QListWidget*>("sampleWorkflows");

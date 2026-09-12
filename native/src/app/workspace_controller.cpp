@@ -274,7 +274,7 @@ bool WorkspaceController::complete_and_stop_repeating(const std::string& task_id
     return complete_task(task_id, complete_branch, error);
 }
 
-bool WorkspaceController::set_task_status(const std::string& task_id, TaskStatus status, std::string& error) {
+bool WorkspaceController::set_task_status(const std::string& task_id, TaskStatus status, std::string& error, bool restore_previous) {
     const auto found = snapshot_.tasks.find(task_id);
     if (found == snapshot_.tasks.end()) { error = "task does not exist"; return false; }
     auto task = found->second;
@@ -282,7 +282,7 @@ bool WorkspaceController::set_task_status(const std::string& task_id, TaskStatus
         if (is_open_status(task.status)) task.previous_open_status = task.status;
         task.completed_at = now();
     } else if (is_open_status(status)) {
-        if (!is_open_status(task.status)) status = task.previous_open_status;
+        if (restore_previous && !is_open_status(task.status)) status = task.previous_open_status;
         task.completed_at.clear();
     }
     task.status = status;
@@ -294,7 +294,7 @@ bool WorkspaceController::bulk_set_status(const std::vector<std::string>& task_i
         if (!snapshot_.tasks.contains(id)) { error = "task does not exist: " + id; return false; }
     }
     for (const auto& id : task_ids) {
-        if (!set_task_status(id, status, error)) return false;
+        if (!set_task_status(id, status, error, false)) return false;
     }
     return true;
 }

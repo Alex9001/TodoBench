@@ -1,0 +1,11 @@
+node_modules/
+dist/
+*.tsbuildinfo
+
+PROMPT.md
+AGENTS.md
+PROGRESS.md
+loop.sh
+
+# Test artifacts
+.mdbase-test-*/

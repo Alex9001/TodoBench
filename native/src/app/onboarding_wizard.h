@@ -32,6 +32,7 @@ private:
     bool validate_location();
     void update_review();
     void update_preview();
+    void show_finish_error(const QString& error);
     Commit commit_;
     QRadioButton* existing_{nullptr};
     QListWidget* workflows_{nullptr};
@@ -45,5 +46,6 @@ private:
     QLabel* appearance_preview_{nullptr};
     QLabel* summary_{nullptr};
     QLabel* finish_error_{nullptr};
+    QWidget* finish_error_banner_{nullptr};
 };
 }

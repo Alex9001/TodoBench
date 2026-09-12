@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    name: Build and test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - run: npm ci
+      - name: Checkout mdbase spec tests
+        uses: actions/checkout@v5
+        with:
+          repository: mdbase-dev/mdbase-spec
+          ref: b133c8c24531d793e9ca0dbc93cb7a3b55d01776
+          path: mdbase-spec
+          persist-credentials: false
+      - name: Install portable testbed runner
+        working-directory: mdbase-spec/packages/testbed
+        run: npm ci
+      - run: npm run build
+      - run: npm test
+        env:
+          MDBASE_SPEC_REPO_DIR: ${{ github.workspace }}/mdbase-spec
+          MDBASE_REQUIRE_V03_CONFORMANCE: "1"
+      - name: Run shared-contract black-box scenario
+        run: node mdbase-spec/packages/testbed/src/cli.mjs run --adapter scripts/testbed-adapter.mjs --scenario core.shared-contract-consumers
+      - name: Verify installable package
+        run: npm run test:package

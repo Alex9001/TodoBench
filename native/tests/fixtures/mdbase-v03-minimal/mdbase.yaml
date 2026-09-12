@@ -1,0 +1,11 @@
+spec_version: "0.3.0"
+settings:
+  timezone: UTC
+  types_folder: _types
+  record_extensions: [md]
+  explicit_type_keys: []
+  id_field: id
+  validation: error
+  exclude:
+    - ".git/**"
+    - ".mdbase/**"
