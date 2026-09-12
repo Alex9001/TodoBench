@@ -50,7 +50,9 @@ std::filesystem::path fspath(const QString& path) {
 }
 
 std::string portable(const std::filesystem::path& path) {
-    return qpath(path).toUtf8().toStdString();
+    std::string value = qpath(path).toUtf8().toStdString();
+    std::replace(value.begin(), value.end(), '\\', '/');
+    return value;
 }
 
 std::string to_hex(const QByteArray& bytes) {
