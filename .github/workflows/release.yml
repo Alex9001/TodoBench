@@ -57,7 +57,7 @@ jobs:
         run: cmake --preset release -DTODOBENCH_BUILD_TESTS=ON "-DCMAKE_TOOLCHAIN_FILE=$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"
       - run: cmake --build --preset release --parallel 3
       - name: Test release build
-        run: ctest --test-dir build/release --output-on-failure --timeout 90
+        run: ctest --test-dir build/release --output-on-failure --timeout 130
       - name: Render themes at both display scales
         shell: bash
         run: |

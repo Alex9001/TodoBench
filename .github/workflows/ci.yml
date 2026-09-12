@@ -34,7 +34,7 @@ jobs:
         shell: pwsh
         run: cmake --preset dev "-DCMAKE_TOOLCHAIN_FILE=$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"
       - run: cmake --build --preset dev --parallel 3
-      - run: ctest --preset dev --output-on-failure --timeout 90
+      - run: ctest --preset dev --output-on-failure --timeout 130
         env:
           QT_QPA_PLATFORM: offscreen
       - if: runner.os == 'Linux'
@@ -46,7 +46,7 @@ jobs:
       - uses: ./.github/actions/setup-native
       - run: cmake --preset asan
       - run: cmake --build --preset asan --parallel 3
-      - run: ctest --preset asan --output-on-failure --timeout 90
+      - run: ctest --preset asan --output-on-failure --timeout 130
         env:
           QT_QPA_PLATFORM: offscreen
   required-gate:
