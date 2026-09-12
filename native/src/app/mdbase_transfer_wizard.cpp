@@ -42,6 +42,10 @@ namespace todobench {
 
 using namespace mdbase_transfer;
 
+namespace {
+constexpr uint kTransferWorkerStackSize = 8U * 1024U * 1024U;
+}
+
 // ---- helpers ----
 static std::string qstr(const QString& s){ return s.toStdString(); }
 static QString qstr(const std::string& s){ return QString::fromStdString(s); }
@@ -145,6 +149,8 @@ MdbaseExportDialog::MdbaseExportDialog(const std::filesystem::path& workspace_ro
                                        QWidget* parent)
     : QDialog(parent), workspace_root_(workspace_root), project_count_(project_count),
       task_count_(task_count), diagnostic_count_(diagnostic_count) {
+    worker_pool_.setMaxThreadCount(1);
+    worker_pool_.setStackSize(kTransferWorkerStackSize);
     setWindowTitle("Export as mdbase…");
     resize(640, 420);
     auto* layout = new QVBoxLayout(this);
@@ -216,7 +222,7 @@ void MdbaseExportDialog::start_summary_scan(){
         summary_ready_ = true;
         refresh_summary();
     });
-    summary_watcher_->setFuture(QtConcurrent::run(
+    summary_watcher_->setFuture(QtConcurrent::run(&worker_pool_,
         [root = workspace_root_, cancellation = &summary_cancellation_, state]{
             collect_export_summary(root, cancellation, *state);
         }));
@@ -338,7 +344,8 @@ void MdbaseExportDialog::run_export(){
         export_button_->setEnabled(true);
         finish_export(result);
     });
-    export_watcher_->setFuture(QtConcurrent::run([request]{ return export_workspace(request); }));
+    export_watcher_->setFuture(QtConcurrent::run(
+        &worker_pool_, [request]{ return export_workspace(request); }));
 }
 
 void MdbaseExportDialog::finish_export(const TransferResult& result){
@@ -487,7 +494,7 @@ private:
         wizard_->source_watcher_ = new QFutureWatcher<void>(wizard_);
         connect(wizard_->source_watcher_, &QFutureWatcher<void>::finished, this,
                 [this, state, requested_path]{ finish_scan(state, requested_path); });
-        wizard_->source_watcher_->setFuture(QtConcurrent::run(
+        wizard_->source_watcher_->setFuture(QtConcurrent::run(&wizard_->worker_pool_,
             [state, source, options, cancellation = &wizard_->cancellation_, page]{
                 state->snapshot_result = capture_snapshot(source, options);
                 if(!state->snapshot_result.ok || !state->snapshot_result.snapshot) return;
@@ -1375,7 +1382,7 @@ private:
             emit completeChanged();
             wizard_->next();
         });
-        wizard_->worker_watcher_->setFuture(QtConcurrent::run([snapshot, preview, destination, cancellation = &wizard_->cancellation_, progress]{
+        wizard_->worker_watcher_->setFuture(QtConcurrent::run(&wizard_->worker_pool_, [snapshot, preview, destination, cancellation = &wizard_->cancellation_, progress]{
             return execute_import(*snapshot, *preview, destination, TransferLimits{}, cancellation, progress);
         }));
     }
@@ -1445,6 +1452,8 @@ private:
 };
 
 MdbaseImportWizard::MdbaseImportWizard(QWidget* parent): QWizard(parent) {
+    worker_pool_.setMaxThreadCount(1);
+    worker_pool_.setStackSize(kTransferWorkerStackSize);
     setWindowTitle("Import from mdbase…");
     resize(800, 600);
     setWizardStyle(QWizard::ModernStyle);

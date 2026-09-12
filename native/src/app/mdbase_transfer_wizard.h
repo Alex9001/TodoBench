@@ -16,6 +16,7 @@
 #include <QCheckBox>
 #include <QComboBox>
 #include <QTableWidget>
+#include <QThreadPool>
 
 #include <filesystem>
 #include <cstddef>
@@ -67,6 +68,7 @@ private:
     QProgressDialog* export_progress_{nullptr};
     QFutureWatcher<void>* summary_watcher_{nullptr};
     QFutureWatcher<mdbase_transfer::TransferResult>* export_watcher_{nullptr};
+    QThreadPool worker_pool_;
     mdbase_transfer::TransferCancellation summary_cancellation_;
     mdbase_transfer::TransferCancellation export_cancellation_;
 };
@@ -115,6 +117,7 @@ private:
     bool source_scan_running_{false};
     QFutureWatcher<mdbase_transfer::TransferResult>* worker_watcher_{nullptr};
     bool worker_running_{false};
+    QThreadPool worker_pool_;
 
     void closeEvent(QCloseEvent* event) override;
     void rebuild_preview();
