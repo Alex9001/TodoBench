@@ -37,6 +37,14 @@ jobs:
       - run: ctest --preset dev --output-on-failure --timeout 90
         env:
           QT_QPA_PLATFORM: offscreen
+      - name: Diagnose a macOS Qt test crash
+        if: failure() && runner.os == 'macOS'
+        run: >-
+          lldb --batch -o run -o "thread backtrace all" --
+          build/dev/test_mdbase_wizard
+          sourceSnapshotDoesNotBlockPageValidation -nocrashhandler -v1
+        env:
+          QT_QPA_PLATFORM: offscreen
       - if: runner.os == 'Linux'
         run: python scripts/check-quality.py --build-dir build/dev
   sanitizers:
