@@ -12,7 +12,10 @@ set(CMAKE_AUTORCC ON)
 
 if(MSVC)
     add_compile_options(/utf-8)
-
+    # The statically linked Rust mdbase engine needs more than Windows' 1 MiB
+    # default stack in debug builds. Match the stack available to the transfer
+    # worker threads so direct storage calls are safe as well.
+    add_link_options(/STACK:8388608)
 endif()
 
 option(TODOBENCH_BUILD_TESTS "Build TodoBench tests" ON)
