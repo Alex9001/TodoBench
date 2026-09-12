@@ -454,7 +454,14 @@ void TaskTreeView::set_layout(const QString& requested, const std::vector<int>& 
     setItemsExpandable(true);
     setUniformRowHeights(table);
     setItemDelegateForColumn(kTitleColumn, table ? table_delegate_ : list_delegate_);
-    const int columns = model() != nullptr ? model()->columnCount() : 6;
+    const int columns = model() != nullptr ? model()->columnCount() : 0;
+    // Qt 6.8 dereferences a missing header section when the indexed resize-mode
+    // overload is called before a model is installed. setModel() reapplies the
+    // layout once the sections exist.
+    if (columns == 0) {
+        viewport()->update();
+        return;
+    }
     for (int column = 0; column < columns; ++column) {
         const bool hidden = !table ? column != kTitleColumn
             : std::find(hidden_columns_.begin(), hidden_columns_.end(), column) != hidden_columns_.end();
