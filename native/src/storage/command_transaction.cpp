@@ -149,7 +149,7 @@ void exclusive_move(const fs::path& source, const fs::path& destination) {
 #endif
 }
 
-void create_file_exclusively(const fs::path& path, const std::string& bytes) {
+fs::path prepare_new_file(const fs::path& path, const std::string& bytes) {
     QTemporaryFile temporary(QString::fromStdString((path.parent_path() / ".todobench-write-XXXXXX").string()));
     if (!temporary.open() || temporary.write(bytes.data(), static_cast<qint64>(bytes.size())) != static_cast<qint64>(bytes.size()) || !temporary.flush())
         throw std::runtime_error("Cannot prepare new file " + path.string());
@@ -157,8 +157,16 @@ void create_file_exclusively(const fs::path& path, const std::string& bytes) {
     if (::fsync(temporary.handle()) != 0) throw std::runtime_error("Cannot sync new file " + path.string());
 #endif
     const auto staged = fs::path(temporary.fileName().toStdString());
-    temporary.close();
-    exclusive_move(staged, path);
+    // QTemporaryFile::close keeps its native handle for reopening on Windows.
+    // Destroy it before renaming so Windows permits the exclusive move.
+    temporary.setAutoRemove(false);
+    return staged;
+}
+
+void create_file_exclusively(const fs::path& path, const std::string& bytes) {
+    const auto staged = prepare_new_file(path, bytes);
+    try { exclusive_move(staged, path); }
+    catch (...) { QFile::remove(QString::fromStdString(staged.string())); throw; }
 }
 
 void apply(const FileOperation& op, bool rollback) {
