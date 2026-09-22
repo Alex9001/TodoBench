@@ -867,26 +867,18 @@ bool append_external_marker(const std::filesystem::path& task_path, const char* 
 
 void cancel_conflict_when_shown(QTimer& timer, MainWindow& window, bool& clicked) {
     auto attempts = std::make_shared<int>(0);
-    auto attempted_click = std::make_shared<bool>(false);
     timer.setInterval(20);
-    QObject::connect(&timer, &QTimer::timeout, &window, [&timer, &clicked, attempts, attempted_click] {
+    QObject::connect(&timer, &QTimer::timeout, &window, [&clicked, attempts] {
         auto* dialog = qobject_cast<QDialog*>(QApplication::activeModalWidget());
-        if (dialog == nullptr) {
-            if (clicked) timer.stop();
-            return;
-        }
+        if (dialog == nullptr) return;
         auto* buttons = dialog->findChild<QDialogButtonBox*>();
         auto* cancel = buttons == nullptr ? nullptr : buttons->button(QDialogButtonBox::Cancel);
-        if (cancel != nullptr && !*attempted_click) {
-            *attempted_click = true;
+        if (cancel != nullptr) {
+            // More queued notifications can reopen the unresolved conflict.
+            // Exercise Cancel for each prompt until this operation finishes.
             cancel->click();
-            clicked = !dialog->isVisible();
-            return;
-        }
-        if (*attempted_click || ++*attempts >= 150) {
-            dialog->reject();
-            timer.stop();
-        }
+            clicked = clicked || !dialog->isVisible();
+        } else if (++*attempts >= 150) dialog->reject();
     });
     timer.start();
 }
