@@ -271,7 +271,7 @@ void MainWindowTest::undoShortcutsRespectTextFocus() {
     title->setFocus();
     title->selectAll();
     QTest::keyClicks(title, "Updated title");
-    QTest::qWait(600);
+    QTRY_COMPARE_WITH_TIMEOUT(WorkspaceScanner{}.scan(root).tasks.begin()->second.title, std::string("Updated title"), 5000);
     TB_VERIFY(!undo->isEnabled());
     title->setText("Updated title"); // clears native text undo
     QTest::keySequence(title, QKeySequence::Undo);
@@ -299,7 +299,7 @@ void MainWindowTest::failedSaveBlocksWorkspaceUndo() {
     title->setFocus();
     title->selectAll();
     QTest::keyClicks(title, "Saved edit");
-    QTest::qWait(600);
+    QTRY_COMPARE_WITH_TIMEOUT(WorkspaceScanner{}.scan(root).tasks.begin()->second.title, std::string("Saved edit"), 5000);
     title->clear();
     tree->setFocus();
     QApplication::processEvents();
