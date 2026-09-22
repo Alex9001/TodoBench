@@ -434,6 +434,7 @@ bool WorkspaceController::resolve_task_conflict(const TaskRecord& local, Conflic
     if (result.change != ExternalChange::Conflict) { error = "no external conflict is available"; return false; }
     std::ifstream reviewed(result.conflict_path, std::ios::binary);
     const std::string reviewed_bytes{std::istreambuf_iterator<char>(reviewed), std::istreambuf_iterator<char>()};
+    reviewed.close();
     if (!expected_disk_hash.empty() && WorkspaceStore::hash_bytes(reviewed_bytes) != expected_disk_hash) {
         error = "The file changed again while you reviewed it. Reopen the conflict to compare the latest version.";
         return false;

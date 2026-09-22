@@ -1777,13 +1777,26 @@ void MainWindowTest::cancelThemeCustomizationPreservesSettings() {
 
 namespace {
 void answer_input(MainWindow& window, const QString& text = {}) {
-    QTimer::singleShot(0, &window, [text] {
-        auto* dialog = qobject_cast<QInputDialog*>(QApplication::activeModalWidget());
-        if (!dialog) return;
-        if (!text.isEmpty()) dialog->setTextValue(text);
-        dialog->accept();
+    auto* timer = new QTimer(&window);
+    timer->setInterval(20);
+    QObject::connect(timer, &QTimer::timeout, &window, [timer, text] {
+        auto* modal = QApplication::activeModalWidget();
+        if (!modal || !modal->isVisible()) return;
+        if (auto* error = qobject_cast<QMessageBox*>(modal)) {
+            qWarning() << "Unexpected project dialog:" << error->text();
+            error->reject();
+        } else {
+            auto* dialog = qobject_cast<QInputDialog*>(modal);
+            if (!dialog) return;
+            if (!text.isEmpty()) dialog->setTextValue(text);
+            dialog->accept();
+        }
+        timer->stop();
+        timer->deleteLater();
     });
+    timer->start();
 }
+
 bool inspect_reminders(MainWindow& window, bool dismiss) {
     bool populated = false;
     QTimer::singleShot(0, &window, [&] {

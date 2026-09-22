@@ -1914,6 +1914,7 @@ bool MainWindow::show_conflict_dialog() {
         return false;
     }
     const auto disk_bytes = disk_file.readAll().toStdString();
+    disk_file.close();
     const auto disk_hash = WorkspaceStore::hash_bytes(disk_bytes);
     auto* copies = new QSplitter(&dialog);
     for (const auto& copy : {std::pair{QString("Your draft (including properties)"), serialize_task_markdown(edited_current_task())},
