@@ -235,11 +235,10 @@ QAction* show_details_action(MainWindow& window) {
 
 void dismiss_active_message_box(QTimer& timer, MainWindow& window) {
     timer.setInterval(20);
-    QObject::connect(&timer, &QTimer::timeout, &window, [&timer] {
+    QObject::connect(&timer, &QTimer::timeout, &window, [] {
         auto* dialog = qobject_cast<QDialog*>(QApplication::activeModalWidget());
         if (dialog == nullptr) return;
         dialog->reject();
-        timer.stop();
     });
     timer.start();
 }
@@ -1016,8 +1015,6 @@ bool preserve_external_conflict(MainWindow& window, QLineEdit* title, const std:
     title->selectAll();
     QTest::keyClicks(title, "Local conflict title");
     if (!append_external_marker(task_path, "External conflict marker")) return false;
-    QTimer conflict_dismissal;
-    dismiss_active_message_box(conflict_dismissal, window);
     QTest::qWait(1200);
     const auto conflicted = WorkspaceScanner{}.scan(root);
     return conflicted.tasks.find(task_id) != conflicted.tasks.end()
@@ -1027,8 +1024,6 @@ bool preserve_external_conflict(MainWindow& window, QLineEdit* title, const std:
 
 bool read_only_rejects_writes(const std::filesystem::path& root, const ViewTaskIds& ids) {
     MainWindow read_only;
-    QTimer read_only_notice;
-    dismiss_active_message_box(read_only_notice, read_only);
     read_only.open_workspace(root);
     read_only.show();
     QApplication::processEvents();
@@ -1048,6 +1043,10 @@ bool run_external_read_only_test(const QString& layout) {
     ViewTaskIds ids;
     if (!seed_view_workspace(root, ids)) return false;
     MainWindow window;
+    // File notifications and focus changes can present another conflict prompt
+    // while the unresolved draft is retained. Handle prompts for the whole scenario.
+    QTimer notices;
+    dismiss_active_message_box(notices, window);
     window.open_workspace(root);
     window.show();
     QApplication::processEvents();
