@@ -233,6 +233,13 @@ QAction* show_details_action(MainWindow& window) {
     return text_action(window, "Show details");
 }
 
+bool wait_for_saved_title(const std::filesystem::path& root, const std::string& title) {
+    return QTest::qWaitFor([&] {
+        const auto snapshot = WorkspaceScanner{}.scan(root);
+        return !snapshot.tasks.empty() && snapshot.tasks.begin()->second.title == title;
+    }, 5000);
+}
+
 void dismiss_active_message_box(QTimer& timer, MainWindow& window) {
     timer.setInterval(20);
     QObject::connect(&timer, &QTimer::timeout, &window, [] {
@@ -271,7 +278,7 @@ void MainWindowTest::undoShortcutsRespectTextFocus() {
     title->setFocus();
     title->selectAll();
     QTest::keyClicks(title, "Updated title");
-    QTRY_COMPARE_WITH_TIMEOUT(WorkspaceScanner{}.scan(root).tasks.begin()->second.title, std::string("Updated title"), 5000);
+    TB_VERIFY(wait_for_saved_title(root, "Updated title"));
     TB_VERIFY(!undo->isEnabled());
     title->setText("Updated title"); // clears native text undo
     QTest::keySequence(title, QKeySequence::Undo);
@@ -299,7 +306,7 @@ void MainWindowTest::failedSaveBlocksWorkspaceUndo() {
     title->setFocus();
     title->selectAll();
     QTest::keyClicks(title, "Saved edit");
-    QTRY_COMPARE_WITH_TIMEOUT(WorkspaceScanner{}.scan(root).tasks.begin()->second.title, std::string("Saved edit"), 5000);
+    TB_VERIFY(wait_for_saved_title(root, "Saved edit"));
     title->clear();
     tree->setFocus();
     QApplication::processEvents();
