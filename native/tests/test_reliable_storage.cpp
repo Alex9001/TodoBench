@@ -30,6 +30,7 @@ private slots:
     void conflictResolutionKeepsChosenVersion();
     void monitorIgnoresUnchangedFilesystem();
     void monitorTracksRecordsNamedAssets();
+    void monitorAllowsProjectRename();
     void monitorNotifiesWhenTaskFileChanges();
     void workspaceLockRejectsSecondWriter();
     void historyStoreListsTaskSnapshots();
@@ -191,6 +192,21 @@ bool monitor_notifies_after_task_file_change(const std::filesystem::path& root) 
     return notifications >= 1;
 }
 }  // namespace
+
+void ReliableStorageTest::monitorAllowsProjectRename() {
+    QTemporaryDir temporary;
+    const auto root = std::filesystem::path(temporary.path().toStdString()) / "workspace";
+    WorkspaceController controller;
+    std::string error;
+    TB_VERIFY2(controller.create_workspace(root, "Monitored", error), error.c_str());
+    const auto project = controller.snapshot().projects.begin()->first;
+    WorkspaceMonitor monitor;
+    monitor.start(root, [] {});
+    TB_VERIFY2(controller.rename_project(project, "Renamed", error), error.c_str());
+    TB_VERIFY(std::filesystem::exists(controller.snapshot().projects.at(project).source_path));
+    TB_VERIFY2(controller.undo(error), error.c_str());
+    TB_VERIFY(std::filesystem::exists(controller.snapshot().projects.at(project).source_path));
+}
 
 void ReliableStorageTest::monitorTracksRecordsNamedAssets() {
     QTemporaryDir temporary;

@@ -38,7 +38,12 @@ WatchSnapshot scan_files(const std::filesystem::path& root) {
 WorkspaceMonitor::WorkspaceMonitor(QObject* parent) : QObject(parent) {
     debounce_.setSingleShot(true);
     debounce_.setInterval(150);
+#ifdef Q_OS_WIN
+    // Native Windows watches can lock directories against transactional renames.
+    scan_timer_.setInterval(1000);
+#else
     scan_timer_.setInterval(10000);
+#endif
     connect(&watcher_, &QFileSystemWatcher::directoryChanged, this, [this] { request_scan(); });
     connect(&watcher_, &QFileSystemWatcher::fileChanged, this, [this] { request_scan(); });
     connect(&debounce_, &QTimer::timeout, this, [this] { begin_scan(); });
@@ -85,10 +90,15 @@ void WorkspaceMonitor::begin_scan() {
     scan_.setFuture(QtConcurrent::run([root] { return scan_files(root); }));
 }
 void WorkspaceMonitor::update_watches(const QStringList& paths) {
+#ifdef Q_OS_WIN
+    // Keep the worker scan, without handles that block moves, Trash, or undo.
+    (void)paths;
+#else
     const auto current = watcher_.files() + watcher_.directories();
     const QSet<QString> before(current.begin(), current.end()), after(paths.begin(), paths.end());
     const auto removed = (before - after).values(), added = (after - before).values();
     if (!removed.isEmpty()) watcher_.removePaths(removed);
     if (!added.isEmpty()) watcher_.addPaths(added);
+#endif
 }
 } // namespace todobench

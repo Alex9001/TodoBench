@@ -48,7 +48,9 @@ Normal commands update affected records instead of reparsing every task. Task ro
 are retained when their identity and position are unchanged. External scan results
 run in a worker and are rejected if a newer command or workspace switch supersedes
 them. Filesystem notifications are debounced, watch registrations are updated by
-difference, and a background ten-second poll covers missed watcher events. Attachment
+difference, and a background ten-second poll covers missed watcher events. Windows
+uses background polling every second instead of native watches, whose open handles
+can block directory renames. Attachment
 directories are excluded from metadata polling. Initial workspace loading and
 transaction writes remain synchronous; benchmark results should not be presented
 as guarantees for network disks or arbitrarily large attachments.

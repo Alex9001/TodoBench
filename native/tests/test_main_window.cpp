@@ -1844,6 +1844,15 @@ void MainWindowTest::emptyProjectsCanBeManaged() {
     const auto root = std::filesystem::path(temporary.path().toStdString()) / "workspace";
     TB_COMPARE(WorkspaceStore::create_workspace(root, "Projects").status, SaveStatus::Saved);
     MainWindow window;
+    QTimer errors;
+    errors.setInterval(20);
+    connect(&errors, &QTimer::timeout, &window, [] {
+        if (auto* box = qobject_cast<QMessageBox*>(QApplication::activeModalWidget())) {
+            qWarning() << "Unexpected project operation error:" << box->text();
+            box->reject();
+        }
+    });
+    errors.start();
     window.open_workspace(root);
     window.findChild<QLineEdit*>("taskFilter")->setText("project:Inbox");
     answer_input(window, "Renamed empty project");
