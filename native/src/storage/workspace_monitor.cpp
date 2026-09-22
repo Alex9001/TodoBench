@@ -27,7 +27,8 @@ WatchSnapshot scan_files(const std::filesystem::path& root) {
         const auto size = it->file_size(error);
         if (error) break;
         result.paths << QString::fromStdString(path.string());
-        lines.push_back(path.generic_string() + '\0' + std::to_string(size) + '\0' + std::to_string(time.time_since_epoch().count()));
+        const auto ticks = std::chrono::duration_cast<std::chrono::nanoseconds>(time.time_since_epoch()).count();
+        lines.push_back(path.generic_string() + '\0' + std::to_string(size) + '\0' + std::to_string(ticks));
     }
     std::sort(lines.begin(), lines.end());
     for (const auto& line : lines) result.signature += line + '\n';
