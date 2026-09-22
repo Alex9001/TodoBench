@@ -81,11 +81,22 @@ def check_macos(bundle):
     for file in (bundle / 'Contents').rglob('*'):
         if not file.is_file() or file.is_symlink():
             continue
-        result = subprocess.run(['otool', '-L', str(file)], capture_output=True, text=True)
-        assert '/opt/homebrew/' not in result.stdout and '/usr/local/opt/' not in result.stdout, result.stdout
-        if result.returncode == 0:
-            assert architecture in run('lipo', '-archs', str(file)).split(), f'library architecture mismatch: {file}'
-            assert macos_minimum(file) <= minimum, f'library deployment target exceeds app target: {file}'
+        if not is_macho(file):
+            continue
+        libraries = run('otool', '-L', str(file))
+        assert '/opt/homebrew/' not in libraries and '/usr/local/opt/' not in libraries, libraries
+        assert architecture in run('lipo', '-archs', str(file)).split(), f'library architecture mismatch: {file}'
+        assert macos_minimum(file) <= minimum, f'library deployment target exceeds app target: {file}'
+
+
+def is_macho(file):
+    # otool can return success for ordinary resources, so identify binaries first.
+    with file.open('rb') as source:
+        magic = source.read(4)
+    return magic.hex() in {
+        'feedface', 'cefaedfe', 'feedfacf', 'cffaedfe',
+        'cafebabe', 'bebafeca', 'cafebabf', 'bfbafeca',
+    }
 
 
 def verify_archive(package, stage):
