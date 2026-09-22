@@ -1610,7 +1610,7 @@ bool diagnostics_result_matches(const DiagnosticsResult& result, int scenario, c
     }
     const auto expected = scenario == 1 ? "No workspace problems found." : "Workspace problems need attention.";
     const bool context = result.information.contains("last workspace scan")
-        && result.information.contains(QString::fromStdString(root.string()))
+        && result.information.contains(QString::fromStdString(std::filesystem::canonical(root).string()))
         && result.information.contains("File → Refresh");
     const bool recovery = result.has_import == (scenario == 3)
         && (scenario != 3 || result.details.contains("duplicate task id"));
