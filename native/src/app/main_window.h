@@ -47,8 +47,10 @@ class TaskTreeView;
 class MainWindow final : public QMainWindow {
 public:
     explicit MainWindow(QWidget* parent = nullptr);
+    ~MainWindow() override;
     void open_workspace(const std::filesystem::path& root);
-    void start_session(const std::filesystem::path& requested = {});
+    void start_session(const std::filesystem::path& requested = {}, bool safe_start = false);
+    QString startup_state() const;
 
 protected:
     void closeEvent(QCloseEvent* event) override;
@@ -116,6 +118,17 @@ private:
     void create_project();
     void rename_current_project();
     void archive_current_project();
+    void unarchive_project();
+    std::string project_for_action(bool archived_only = false);
+    void create_daily_actions(QMenu* menu);
+    void create_bulk_actions(QMenu* menu);
+    void bulk_change_status(TaskStatus status);
+    void bulk_change_priority(Priority priority);
+    void bulk_trash_selected();
+    void show_reminder_inbox();
+    void update_reminder_badge();
+    void persist_reminder_state();
+    std::vector<ScheduledReminder> pending_reminders() const;
     void move_current_task();
     void toggle_current_completion();
     void complete_and_stop_repeating();
@@ -123,6 +136,8 @@ private:
     void trash_current_task();
     void restore_task();
     void undo_trash();
+    void undo_workspace(bool redo);
+    void refresh_storage_paths();
     void import_attachment();
     bool handle_task_drop(const QModelIndex& source, const QModelIndex& target, int position);
     void open_settings(bool appearance = false);
@@ -134,6 +149,8 @@ private:
     void show_missed_reminders();
     void snooze_reminder();
     void handle_external_change();
+    void schedule_external_scan();
+    void accept_external_scan(WorkspaceSnapshot snapshot, size_t generation);
     bool show_conflict_dialog();
     bool metadata_matches_open_task() const;
     bool has_unsaved_task_edits() const;
@@ -145,6 +162,7 @@ private:
     void apply_save_result(const SaveResult& result, bool interactive);
     void set_workspace_readonly(bool readonly);
     void update_action_state();
+    void update_history_actions();
     void update_schedule_summaries();
     void edit_task_recurrence();
     void edit_task_reminders();
@@ -160,6 +178,7 @@ private:
     WorkspaceController controller_;
     TaskTreeView* task_view_{nullptr};
     QStandardItemModel* task_model_{nullptr};
+    std::unordered_map<std::string, std::string> rendered_rows_;
     QTabBar* view_tabs_{nullptr};
     std::vector<OpenViewTab> view_tab_states_;
     int active_view_index_{0};
@@ -181,6 +200,8 @@ private:
     QAction* move_action_{nullptr};
     QAction* trash_action_{nullptr};
     QAction* save_action_{nullptr};
+    QAction* undo_action_{nullptr};
+    QAction* redo_action_{nullptr};
     QAction* stop_repeating_action_{nullptr};
     QAction* show_task_action_{nullptr};
     QAction* settings_action_{nullptr};
@@ -188,6 +209,9 @@ private:
     QAction* export_mdbase_action_{nullptr};
     QAction* import_mdbase_action_{nullptr};
     QAction* bulk_wait_action_{nullptr};
+    QAction* reminders_action_{nullptr};
+    QMenu* bulk_menu_{nullptr};
+    QDate view_date_;
     QAction* details_action_{nullptr};
     QAction* list_action_{nullptr};
     QAction* table_action_{nullptr};
@@ -239,6 +263,10 @@ private:
     std::string staged_reminders_yaml_{"[]"};
     std::string last_reminder_task_id_;
     bool read_only_{false};
+    bool external_scan_running_{false};
+    bool external_scan_pending_{false};
+    bool onboarding_visible_{false};
+    bool workspace_ready_{false};
     bool autosave_paused_{false};
     bool applying_detail_{false};
 };

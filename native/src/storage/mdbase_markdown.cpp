@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "storage/mdbase_markdown.h"
+#include "storage/markdown_links.h"
 
 #include <QFile>
 #include <QUrl>
@@ -107,33 +108,6 @@ std::string percent_decode(const std::string& s){
         out.push_back(s[i]);
     }
     return out;
-}
-
-bool is_in_fence(const std::string& body, size_t pos) {
-    size_t fenceOpen = 0, idx = 0;
-    while ((idx = body.find("```", idx)) != std::string::npos) {
-        if (fenceOpen == 0) fenceOpen = idx;
-        else {
-            if (pos > fenceOpen && pos < idx + 3) return true;
-            fenceOpen = 0;
-        }
-        idx += 3;
-    }
-    return fenceOpen != 0 && pos > fenceOpen;
-}
-
-bool is_in_code(const std::string& body, size_t pos) {
-    if (is_in_fence(body, pos)) return true;
-    const auto previousNewline = body.rfind('\n', pos);
-    const size_t lineStart = previousNewline == std::string::npos ? 0 : previousNewline + 1;
-    const size_t lineEnd = body.find('\n', pos);
-    const std::string line = body.substr(lineStart,
-        lineEnd == std::string::npos ? std::string::npos : lineEnd - lineStart);
-    if (line.starts_with("    ") || line.starts_with("\t")) return true;
-    const auto before = std::count(body.begin() + lineStart, body.begin() + pos, '`');
-    const auto after = lineEnd == std::string::npos ? 0
-        : std::count(body.begin() + pos, body.begin() + lineEnd, '`');
-    return before % 2 == 1 && after % 2 == 1;
 }
 
 std::string trim(const std::string& text) {
@@ -263,93 +237,6 @@ std::string rewrite_target(const std::string& original, RewriteContext& context)
     return original;
 }
 
-struct Replacement { size_t start; size_t end; std::string text; };
-using Replacements = std::vector<Replacement>;
-
-size_t skip_space(const std::string& body, size_t position, size_t end) {
-    while (position < end && std::isspace(static_cast<unsigned char>(body[position]))) ++position;
-    return position;
-}
-
-std::string inline_target(const std::string& inside) {
-    for (size_t i = 1; i < inside.size(); ++i) {
-        if (inside[i] == '"' && std::isspace(static_cast<unsigned char>(inside[i - 1]))) {
-            return trim(inside.substr(0, i));
-        }
-    }
-    return trim(inside);
-}
-
-void add_target_replacement(const std::string& target, size_t start, RewriteContext& context,
-                            Replacements& replacements) {
-    if (target.empty() || is_remote_url(target)) return;
-    const auto rewritten = rewrite_target(target, context);
-    if (rewritten != target) replacements.push_back({start, start + target.size(), rewritten});
-}
-
-void collect_inline(const std::string& body, RewriteContext& context, Replacements& replacements) {
-    size_t position = 0;
-    while (position < body.size()) {
-        const auto open = body.find('[', position);
-        if (open == std::string::npos) break;
-        position = open + 1;
-        if (open + 1 < body.size() && body[open + 1] == '[') { ++position; continue; }
-        if (is_in_code(body, open)) continue;
-        const auto close = body.find(']', open + 1);
-        if (close == std::string::npos) break;
-        position = close + 1;
-        const auto paren = skip_space(body, close + 1, body.size());
-        if (paren >= body.size() || body[paren] != '(') continue;
-        const auto end = body.find(')', paren + 1);
-        if (end == std::string::npos) break;
-        const auto start = skip_space(body, paren + 1, end);
-        add_target_replacement(inline_target(body.substr(start, end - start)), start, context, replacements);
-        position = end + 1;
-    }
-}
-
-void collect_reference_line(const std::string& line, size_t offset, RewriteContext& context,
-                            Replacements& replacements) {
-    const auto left = line.find('[');
-    const auto right = line.find(']', left == std::string::npos ? 0 : left);
-    const auto colon = line.find(':', right == std::string::npos ? 0 : right);
-    if (left == std::string::npos || right == std::string::npos || colon == std::string::npos) return;
-    const auto start = skip_space(line, colon + 1, line.size());
-    auto end = start;
-    while (end < line.size() && !std::isspace(static_cast<unsigned char>(line[end]))) ++end;
-    add_target_replacement(line.substr(start, end - start), offset + start, context, replacements);
-}
-
-void collect_references(const std::string& body, RewriteContext& context, Replacements& replacements) {
-    size_t position = 0;
-    while (position < body.size()) {
-        const auto end = body.find('\n', position);
-        if (!is_in_code(body, position)) {
-            collect_reference_line(body.substr(position,
-                end == std::string::npos ? std::string::npos : end - position),
-                position, context, replacements);
-        }
-        if (end == std::string::npos) break;
-        position = end + 1;
-    }
-}
-
-struct WikiTarget { std::string target; std::string alias; std::string anchor; };
-WikiTarget split_wiki_target(const std::string& inside) {
-    WikiTarget parsed{inside, {}, {}};
-    const auto bar = inside.find('|');
-    const auto hash = inside.find('#');
-    if (bar != std::string::npos) {
-        parsed.target = inside.substr(0, bar);
-        parsed.alias = inside.substr(bar + 1);
-    } else if (hash != std::string::npos) {
-        parsed.target = inside.substr(0, hash);
-        parsed.anchor = inside.substr(hash);
-    }
-    parsed.target = trim(parsed.target);
-    return parsed;
-}
-
 std::optional<std::string> wiki_id_destination(const std::string& target, RewriteContext& context) {
     if (target.find('/') != std::string::npos || target.find('.') != std::string::npos) return std::nullopt;
     if (!context.destinations.contains(context.source_path)) return std::nullopt;
@@ -363,56 +250,6 @@ std::optional<std::string> wiki_id_destination(const std::string& target, Rewrit
         }
     }
     return std::nullopt;
-}
-
-std::string wiki_display(const WikiTarget& parsed, const std::string& rewritten) {
-    if (!parsed.alias.empty()) return parsed.alias;
-    const auto slash = rewritten.find_last_of('/');
-    if (slash == std::string::npos) return parsed.target;
-    auto base = rewritten.substr(slash + 1);
-    base = base.substr(0, base.find('.'));
-    return base.empty() ? parsed.target : base;
-}
-
-void collect_wiki_link(const std::string& body, size_t open, size_t close,
-                        RewriteContext& context, Replacements& replacements) {
-    const auto parsed = split_wiki_target(body.substr(open + 2, close - open - 2));
-    if (parsed.target.empty() || is_remote_url(parsed.target)) return;
-    const auto id_destination = wiki_id_destination(parsed.target, context);
-    auto rewritten = id_destination ? *id_destination : rewrite_target(parsed.target, context);
-    if (!parsed.anchor.empty() && rewritten.find('#') == std::string::npos) rewritten += parsed.anchor;
-    if (rewritten == parsed.target) return;
-    const bool embed = open > 0 && body[open - 1] == '!';
-    const auto text = std::string(embed ? "![" : "[") + wiki_display(parsed, rewritten)
-        + "](" + rewritten + ")";
-    replacements.push_back({embed ? open - 1 : open, close + 2, text});
-}
-
-void collect_wiki(const std::string& body, RewriteContext& context, Replacements& replacements) {
-    size_t position = 0;
-    while (position + 1 < body.size()) {
-        const auto open = body.find("[[", position);
-        if (open == std::string::npos) break;
-        position = open + 2;
-        if (is_in_code(body, open)) continue;
-        const auto close = body.find("]]", open + 2);
-        if (close == std::string::npos) break;
-        collect_wiki_link(body, open, close, context, replacements);
-        position = close + 2;
-    }
-}
-
-std::string apply_replacements(std::string body, Replacements replacements) {
-    std::sort(replacements.begin(), replacements.end(), [](const auto& a, const auto& b) {
-        return a.start > b.start;
-    });
-    size_t previous_start = std::string::npos;
-    for (const auto& replacement : replacements) {
-        if (replacement.end > previous_start) continue;
-        body.replace(replacement.start, replacement.end - replacement.start, replacement.text);
-        previous_start = replacement.start;
-    }
-    return body;
 }
 
 DestinationMap source_destinations(const TransferPreview& preview) {
@@ -435,11 +272,15 @@ MarkdownRewriteResult rewrite_markdown_links(const MarkdownRewriteRequest& reque
     const auto destinations = source_destinations(*request.preview);
     for (const auto& record : request.preview->records) {
         RewriteContext context{request, destinations, result, record.source_path};
-        Replacements replacements;
-        collect_inline(record.body, context, replacements);
-        collect_references(record.body, context, replacements);
-        collect_wiki(record.body, context, replacements);
-        result.rewritten_body_by_source[record.source_path] = apply_replacements(record.body, replacements);
+        result.rewritten_body_by_source[record.source_path] = rewrite_link_destinations(record.body,
+            [&](const std::string& target, bool wiki) {
+                if (wiki) {
+                    const auto hash = target.find('#');
+                    const auto mapped = wiki_id_destination(target.substr(0, hash), context);
+                    if (mapped) return *mapped + (hash == std::string::npos ? "" : target.substr(hash));
+                }
+                return rewrite_target(target, context);
+            }, true);
     }
     result.ok = std::none_of(result.diagnostics.begin(), result.diagnostics.end(), [](const auto& diagnostic) {
         return diagnostic.severity == TransferSeverity::Error ||

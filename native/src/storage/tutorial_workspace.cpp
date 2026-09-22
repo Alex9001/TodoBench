@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "storage/tutorial_workspace.h"
+#include "storage/directory_names.h"
 #include "storage/workspace_creation.h"
 
 #include "storage/attachment_store.h"
@@ -25,10 +26,11 @@ void require_saved(const SaveResult& result) {
 
 ProjectRecord add_project(const WorkspaceStore& store, const std::filesystem::path& parent,
                           const std::string& name, const std::string& slug) {
+    (void)slug;
     ProjectRecord project;
     project.id = new_id();
     project.display_name = name;
-    project.source_path = (parent / "projects" / (slug + "--" + project.id) / "project.md").string();
+    project.source_path = (allocate_directory(parent / "projects", name, "project") / "project.md").string();
     require_saved(store.save_project(project));
     return project;
 }
@@ -47,8 +49,7 @@ TaskRecord lesson(const ProjectRecord& project, int number, const std::string& t
     task.created_at = QDateTime::currentDateTimeUtc().toString(Qt::ISODateWithMs).toStdString();
     task.updated_at = task.created_at;
     task.revision = new_id();
-    task.source_path = (std::filesystem::path(project.source_path).parent_path() / "tasks"
-        / ("lesson-" + std::to_string(number) + "--" + task.id) / "task.md").string();
+    task.source_path = (allocate_directory(std::filesystem::path(project.source_path).parent_path() / "tasks", task.title, "task") / "task.md").string();
     return task;
 }
 
@@ -164,7 +165,7 @@ void add_schedule_lesson(const WorkspaceStore& store, const ProjectRecord& proje
 This task is due a week after workspace creation and repeats every week.
 Use **Recurrence** above to inspect its schedule, then **Complete / Reopen**
 to try a completion. The same task advances to its next date; **History** keeps
-the completed notes. **Edit > Undo Completion** reverses the last completion.
+the completed notes. **Edit > Undo** reverses the latest task or project action.
 
 - [ ] Review what went well
 - [ ] Choose the next small step

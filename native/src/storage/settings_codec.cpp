@@ -311,6 +311,9 @@ SettingsResult load_settings(const std::filesystem::path& path) {
         const auto key = value.toString().toStdString();
         if (!key.empty()) settings.delivered_reminder_keys.push_back(key);
     }
+    for (const auto& value : object.value("dismissed_reminder_keys").toArray()) {
+        if (!value.toString().isEmpty()) settings.dismissed_reminder_keys.push_back(value.toString().toStdString());
+    }
     load_string_map(object.value("snoozed_reminder_until").toObject(), settings.snoozed_reminder_until);
     load_string_map(object.value("tag_colors").toObject(), settings.tag_colors);
     load_string_map(object.value("project_icons").toObject(), settings.project_icons);
@@ -350,6 +353,9 @@ QJsonObject recognized_settings(const Settings& settings) {
     QJsonArray delivered_keys;
     for (const auto& key : settings.delivered_reminder_keys) delivered_keys.append(QString::fromStdString(key));
     object["delivered_reminder_keys"] = delivered_keys;
+    QJsonArray dismissed_keys;
+    for (const auto& key : settings.dismissed_reminder_keys) dismissed_keys.append(QString::fromStdString(key));
+    object["dismissed_reminder_keys"] = dismissed_keys;
     object["snoozed_reminder_until"] = save_string_map(settings.snoozed_reminder_until);
     object["tag_colors"] = save_string_map(settings.tag_colors);
     object["project_icons"] = save_string_map(settings.project_icons);

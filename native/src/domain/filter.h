@@ -25,6 +25,8 @@ struct FilterSpec {
     std::optional<QDate> due_from;
     std::optional<QDate> due_to;
     bool include_subprojects{true};
+    bool include_archived{false};
+    std::string due_period;
 };
 
 struct FilterCompileResult {
@@ -36,8 +38,9 @@ FilterCompileResult compile_filter(const std::string& expression);
 std::vector<std::string> filter_tokens(const std::string& expression);
 std::vector<std::string> filter_token_values(const std::string& expression);
 std::string quote_filter_token(const std::string& token);
-bool matches_filter(const TaskRecord& task, const FilterSpec& spec);
+bool matches_filter(const TaskRecord& task, const FilterSpec& spec, const QDate& today = QDate{});
 bool matches_filter(const TaskRecord& task, const FilterSpec& spec,
-                    const std::unordered_map<std::string, ProjectRecord>& projects);
+                    const std::unordered_map<std::string, ProjectRecord>& projects, const QDate& today = QDate{});
+FilterSpec expand_project_filter(const FilterSpec& spec, const std::unordered_map<std::string, ProjectRecord>& projects);
 
 }  // namespace todobench

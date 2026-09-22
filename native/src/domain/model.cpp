@@ -2,6 +2,7 @@
 #include "domain/model.h"
 
 #include <regex>
+#include <unordered_set>
 
 namespace todobench {
 
@@ -45,6 +46,18 @@ bool parse_priority(const std::string& value, Priority& priority) {
     else if (value == "urgent") priority = Priority::Urgent;
     else return false;
     return true;
+}
+
+bool project_is_archived(const std::string& id, const std::unordered_map<std::string, ProjectRecord>& projects) {
+    std::unordered_set<std::string> seen;
+    auto current = id;
+    while (!current.empty() && seen.insert(current).second) {
+        const auto found = projects.find(current);
+        if (found == projects.end()) break;
+        if (found->second.archived) return true;
+        current = found->second.parent_id;
+    }
+    return false;
 }
 
 bool is_valid_uuid(const std::string& value) {

@@ -14,23 +14,25 @@ void ReminderScheduler::replace_schedule(std::vector<ScheduledReminder> reminder
     std::sort(reminders_.begin(), reminders_.end(), [](const ScheduledReminder& left, const ScheduledReminder& right) {
         return left.fire_at < right.fire_at;
     });
-    const auto is_active = [this](const std::string& key) {
-        return std::any_of(reminders_.begin(), reminders_.end(), [&key](const ScheduledReminder& reminder) {
-            return reminder_delivery_key(reminder) == key;
-        });
-    };
+    std::unordered_set<std::string> active;
+    for (const auto& reminder : reminders_) active.insert(reminder_delivery_key(reminder));
     for (auto iterator = delivered_keys_.begin(); iterator != delivered_keys_.end();) {
-        if (!is_active(*iterator)) iterator = delivered_keys_.erase(iterator);
+        if (!active.contains(*iterator)) iterator = delivered_keys_.erase(iterator);
         else ++iterator;
     }
     for (auto iterator = snoozed_until_.begin(); iterator != snoozed_until_.end();) {
-        if (!is_active(iterator->first)) iterator = snoozed_until_.erase(iterator);
+        if (!active.contains(iterator->first)) iterator = snoozed_until_.erase(iterator);
         else ++iterator;
     }
 }
 
 void ReminderScheduler::restore_delivered(const std::vector<std::string>& keys) {
-    delivered_keys_.insert(keys.begin(), keys.end());
+    delivered_keys_.clear();
+    const std::unordered_set<std::string> restored(keys.begin(), keys.end());
+    for (const auto& reminder : reminders_) {
+        const auto key = reminder_delivery_key(reminder);
+        if (restored.contains(key)) delivered_keys_.insert(key);
+    }
 }
 
 std::vector<std::string> ReminderScheduler::delivered_keys() const {
@@ -43,7 +45,8 @@ void ReminderScheduler::mark_delivered(const ScheduledReminder& reminder) {
 }
 
 bool ReminderScheduler::snooze(const ScheduledReminder& reminder, const QDateTime& until) {
-    if (!until.isValid() || delivered_keys_.contains(reminder_delivery_key(reminder))) return false;
+    if (!until.isValid()) return false;
+    delivered_keys_.erase(reminder_delivery_key(reminder));
     snoozed_until_[reminder_delivery_key(reminder)] = until;
     return true;
 }

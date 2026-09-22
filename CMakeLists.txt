@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.24)
 
-project(TodoBench VERSION 0.1.2 LANGUAGES CXX)
+project(TodoBench VERSION 0.1.3 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -45,6 +45,10 @@ add_library(todobench_core
     native/src/storage/front_matter_codec.cpp
     native/src/storage/workspace_scanner.cpp
     native/src/storage/workspace_store.cpp
+    native/src/app/startup_diagnostics.cpp
+    native/src/storage/command_transaction.cpp
+    native/src/storage/directory_names.cpp
+    native/src/storage/markdown_links.cpp
     native/src/storage/tutorial_workspace.cpp
     native/src/storage/workspace_creation.cpp
     native/src/storage/sample_workspaces.cpp
@@ -133,7 +137,7 @@ else()
 endif()
 
 target_include_directories(todobench_core PUBLIC native/src)
-target_link_libraries(todobench_core PUBLIC Qt6::Core yaml-cpp::yaml-cpp LibArchive::LibArchive todobench_mdbase_bridge)
+target_link_libraries(todobench_core PUBLIC Qt6::Core Qt6::Concurrent yaml-cpp::yaml-cpp LibArchive::LibArchive todobench_mdbase_bridge)
 target_compile_features(todobench_core PUBLIC cxx_std_20)
 if(TARGET libcmark-gfm AND TARGET libcmark-gfm-extensions)
     target_compile_definitions(todobench_core PRIVATE TODOBENCH_HAS_CMARK=1)
@@ -170,6 +174,7 @@ add_executable(TodoBench
     native/src/app/main.cpp
     native/src/app/workspace_controller.cpp
     native/src/app/main_window.cpp
+    native/src/app/main_window_workflows.cpp
     native/src/app/main_window_context.cpp
     native/src/app/onboarding_wizard.cpp
     native/src/app/mdbase_transfer_wizard.cpp
@@ -209,6 +214,7 @@ if(TODOBENCH_BUILD_TESTS)
         DEPENDS "${TODOBENCH_MDBASE_ORACLE_ROOT}/dist/index.js")
     enable_testing()
     find_package(Python3 REQUIRED COMPONENTS Interpreter)
+    add_test(NAME test_startup COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/test-startup.py $<TARGET_FILE:TodoBench>)
     add_executable(test_interoperability native/tests/test_interoperability.cpp native/src/app/markdown_editor.cpp)
     target_link_libraries(test_interoperability PRIVATE todobench_core Qt6::Test)
     add_test(NAME test_interoperability COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/run-qt-test.py $<TARGET_FILE:test_interoperability>)
@@ -244,6 +250,10 @@ if(TODOBENCH_BUILD_TESTS)
     target_link_libraries(test_editor_attachment PRIVATE todobench_core Qt6::Widgets Qt6::Test)
     target_compile_features(test_editor_attachment PRIVATE cxx_std_20)
     add_test(NAME test_editor_attachment COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/run-qt-test.py $<TARGET_FILE:test_editor_attachment>)
+
+    add_executable(test_command_history native/tests/test_command_history.cpp native/src/app/workspace_controller.cpp)
+    target_link_libraries(test_command_history PRIVATE todobench_core Qt6::Widgets Qt6::Test)
+    add_test(NAME test_command_history COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/run-qt-test.py $<TARGET_FILE:test_command_history>)
 
     add_executable(test_task_commands native/tests/test_task_commands.cpp)
     target_link_libraries(test_task_commands PRIVATE todobench_core Qt6::Widgets Qt6::Test)
@@ -298,6 +308,7 @@ if(TODOBENCH_BUILD_TESTS)
     add_executable(test_main_window
         native/tests/test_main_window.cpp
         native/src/app/main_window.cpp
+        native/src/app/main_window_workflows.cpp
         native/src/app/main_window_context.cpp
         native/src/app/onboarding_wizard.cpp
         native/src/app/mdbase_transfer_wizard.cpp

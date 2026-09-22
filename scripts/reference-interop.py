@@ -31,16 +31,34 @@ def independent_edit(root):
     path.write_text(json.dumps(settings, indent=2) + '\n')
 
 
+def relocated_files(before, after):
+    # Identity is metadata, so title edits may relocate a project and all assets.
+    destinations = {document(p)[0]['id']: p.parent for p in after.rglob('*.md')}
+    moves = sorted(((p.parent, destinations[document(p)[0]['id']]) for p in before.rglob('*.md')),
+                   key=lambda pair: len(pair[0].parts), reverse=True)
+    result = {}
+    for path in before.rglob('*'):
+        if not path.is_file():
+            continue
+        target = after / path.relative_to(before)
+        for source, destination in moves:
+            if path.is_relative_to(source):
+                target = destination / path.relative_to(source)
+                break
+        result[path] = unicodedata.normalize('NFC', target.relative_to(after).as_posix())
+    return result
+
+
 def verify(before, after):
     # macOS tools/filesystems can use canonically equivalent decomposed names.
     names = lambda root: {unicodedata.normalize('NFC', p.relative_to(root).as_posix()): p
                           for p in root.rglob('*') if p.is_file()}
-    originals, imported = names(before), names(after)
-    assert originals.keys() == imported.keys(), (originals.keys() - imported.keys(), imported.keys() - originals.keys())
+    originals, imported = relocated_files(before, after), names(after)
+    assert set(originals.values()) == imported.keys(), (set(originals.values()), imported.keys())
     for path in before.rglob('*'):
         if not path.is_file():
             continue
-        other = imported[unicodedata.normalize('NFC', path.relative_to(before).as_posix())]
+        other = imported[originals[path]]
         if path.suffix == '.md':
             old, old_body = document(path)
             new, new_body = document(other)

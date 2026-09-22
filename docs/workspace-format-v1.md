@@ -18,7 +18,15 @@ projects/<project-folder>/projects/<child-project-folder>/...
 ```
 
 Folder names are human-readable hints, not identifiers. TodoBench creates
-`slug--uuid` names; readers must accept other portable folder names. Project and
+readable names such as `inbox` and `buy-milk`; collisions receive `-2`, `-3`,
+and so on. Titles are NFC-normalized and lowercased; letters and numbers remain,
+other runs become hyphens. Bases are limited to 80 UTF-8 bytes. Reserved device
+names receive a `task-` or `project-` prefix. Collision comparisons use NFC and
+Unicode case folding on every platform, including all filesystem entries.
+Readers must accept existing portable folder names, including legacy
+`slug--uuid` names. Saving a title with a changed normalized base renames its
+folder; an unchanged base retains its existing suffix. No bulk migration runs.
+Project and
 task `id` values are stable UUID strings, conventionally lowercase and without
 braces. Never regenerate IDs on import, rename, or move. Duplicate IDs are errors,
 not instructions to replace another record. Readers must report invalid UUIDs.
@@ -126,7 +134,8 @@ A reminder has `id` (stable nonempty string, normally UUID) and `minutes_before`
 (nonnegative integer, up to 35791394). Missing offsets mean zero in the UI;
 entries missing ID or offset are not delivered. IDs must be unique within a
 task. Delivery identity is `task_id:task_id@YYYY-MM-DD:reminder_id`. Persisted
-`delivered_reminder_keys` prevent duplicate delivery; snoozes map those same
+`delivered_reminder_keys` prevent duplicate notification delivery, while
+`dismissed_reminder_keys` remove acknowledged reminders from the persistent inbox; snoozes map those same
 keys to ISO-8601 timestamps. Done/cancelled tasks do not deliver reminders.
 
 ## Project front matter
@@ -169,6 +178,7 @@ workspace-owned, including UI preferences. Preserve unknown nested values.
 | `open_view_tabs` | array of open-tab objects | `[]` |
 | `active_view_tab` | nonnegative integer, zero-based index | 0 |
 | `delivered_reminder_keys` | array of strings | `[]` |
+| `dismissed_reminder_keys` | array of strings | `[]` |
 | `snoozed_reminder_until` | object: delivery key → ISO timestamp | `{}` |
 | `formatting_rules` | ordered array of formatting-rule objects | `[]` (UI supplies defaults when empty) |
 | `tag_colors` | object: tag → color string | `{}` |
@@ -285,3 +295,24 @@ extract TodoBench's export, edit metadata, repack, import/save through TodoBench
 and independently verify identities, extension values, bodies, and attachments.
 Run it via `ctest --preset dev -R reference_interop`. Malformed metadata and unsafe
 archive cases are exercised by `test_interoperability` and `test_archive`.
+
+## Internal command recovery
+
+The public metadata schema remains version 1. Session-only command history uses
+reversible moves and backups of affected files under `.todobench/recovery`.
+Records contain relative paths, before/after bytes and SHA-256 expectations, and
+move inventories. They are diagnostic evidence, never replayed automatically on
+open or import. Completed records are pruned when the session no longer needs
+them; incomplete rollback evidence is retained. Commands have a 64 MiB affected
+file backup limit; history is bounded by 100 actions and 256 MiB of affected bytes.
+
+Trash manifest version 2 records owning project IDs and relative original/stored
+paths before moving any directories. Legacy version 1 remains readable. Restore
+resolves registered projects by ID, allocates collision-safe destinations, and
+creates a valid Inbox record if needed. Missing or invalid manifests are reported
+individually. Manual Restore is part of the same undo timeline as deletion.
+
+Renames and moves update local inline links/images, reference definitions, and
+path-based wiki links in live Markdown documents as part of the same command.
+Anchors, aliases, and unrelated source bytes remain unchanged. Remote URLs, code
+examples, and destinations outside the workspace are left alone.

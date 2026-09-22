@@ -190,6 +190,8 @@ struct TransferPreview {
     // Deterministic dest path allocation (native folder layout) keyed by native_id
     std::unordered_map<std::string, std::string> native_id_to_dest_rel; // native_id -> "projects/.../task.md"
 
+    std::unordered_map<std::string, std::string> generated_project_names; // Explicit UUID -> display name
+
     // ID map: source_path -> native_id (and id_field source identity map)
     std::unordered_map<std::string, std::string> source_path_to_native_id;
     // (source kind -> (source identity value string -> native_id)) — used for reference resolution in T05

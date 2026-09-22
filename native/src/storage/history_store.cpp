@@ -2,6 +2,7 @@
 #include "storage/history_store.h"
 
 #include "storage/front_matter_codec.h"
+#include "storage/command_transaction.h"
 
 #include <QSaveFile>
 
@@ -16,11 +17,16 @@ HistoryResult HistoryStore::snapshot_branch(const std::vector<TaskRecord>& tasks
     if (tasks.empty()) return {false, {}, "cannot snapshot an empty task branch"};
     const auto directory = root_ / ".todobench" / "history" / completion_id;
     std::error_code error;
-    std::filesystem::create_directories(directory, error);
+    if (auto* transaction = CommandTransaction::current()) transaction->mkdir(directory);
+    else std::filesystem::create_directories(directory, error);
     if (error) return {false, directory, error.message()};
     for (const auto& task : tasks) {
         const auto source = std::filesystem::path(task.source_path);
         const auto file = directory / (source.parent_path().filename().string() + "--" + task.id + ".md");
+        if (auto* transaction = CommandTransaction::current()) {
+            transaction->write(file, serialize_task_markdown(task));
+            continue;
+        }
         QSaveFile output(QString::fromStdString(file.string()));
         if (!output.open(QIODevice::WriteOnly)) return {false, file, output.errorString().toStdString()};
         const auto content = serialize_task_markdown(task);

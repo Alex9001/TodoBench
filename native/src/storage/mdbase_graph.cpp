@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "storage/mdbase_graph.h"
+#include "storage/directory_names.h"
 
 #include "storage/mdbase_import.h"
 #include "domain/model.h"
@@ -14,23 +15,6 @@
 
 namespace todobench::mdbase_transfer {
 namespace {
-char slug_character(unsigned char c) {
-    if (c >= 'A' && c <= 'Z') return static_cast<char>(c - 'A' + 'a');
-    if ((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9')) return static_cast<char>(c);
-    return '-';
-}
-
-std::string slug_file(const std::string& title, const std::string& fallbackStem) {
-    std::string out;
-    for (unsigned char character : title) {
-        const char c = slug_character(character);
-        if (c == '-' && (out.empty() || out.back() == '-')) continue;
-        out.push_back(c);
-    }
-    if (!out.empty() && out.back() == '-') out.pop_back();
-    if (!out.empty()) return out.substr(0, 32);
-    return fallbackStem.empty() ? "untitled" : fallbackStem;
-}
 std::string deterministic_uuid(const std::string& seed){
     auto hex = QCryptographicHash::hash(QByteArray::fromStdString(seed), QCryptographicHash::Sha256).toHex().toStdString();
     std::string h = hex.substr(0,32);
@@ -101,25 +85,23 @@ bool parent_chain_has_cycle(const std::string& start, const RecordIndex& index) 
     return false;
 }
 
-std::string record_folder(const PreviewRecord& record) {
-    return slug_file(record.native_title, std::filesystem::path(record.source_path).stem().string())
-        + "--" + record.native_id.substr(0, 8);
-}
-
 class PathAllocator {
 public:
-    explicit PathAllocator(const TransferPreview& preview)
+    explicit PathAllocator(TransferPreview& preview)
         : preview_(preview), records_(index_records(preview)) {}
 
     PathMap allocate() {
-        for (const auto& record : preview_.records) {
+        std::vector<PreviewRecord> ordered = preview_.records;
+        std::sort(ordered.begin(), ordered.end(), [](const auto& a, const auto& b) { return a.source_path < b.source_path; });
+        preview_.generated_project_names.clear();
+        for (const auto& record : ordered) {
             if (!record.is_task) project_path(record.native_id);
         }
         create_inbox();
-        for (const auto& record : preview_.records) {
+        for (const auto& record : ordered) {
             if (record.is_task) {
-                destinations_[record.native_id] = owner_path(record.native_project_choice)
-                    + "/tasks/" + record_folder(record) + "/task.md";
+                const auto parent = owner_path(record.native_project_choice) + "/tasks";
+                destinations_[record.native_id] = parent + "/" + allocate_directory_name(record.native_title, "task", occupied_[parent]) + "/task.md";
             }
         }
         return destinations_;
@@ -135,11 +117,12 @@ private:
         // Break cycles here; validate_import_graph supplies the blocking diagnostic.
         if (!active_projects_.insert(id).second) return "projects/unresolved";
         const auto& record = *found->second;
-        std::string path = "projects/" + record_folder(record);
+        std::string parent_path = "projects";
         const auto parent = records_.find(record.native_parent_choice);
         if (parent != records_.end() && !parent->second->is_task) {
-            path = project_path(parent->first) + "/projects/" + record_folder(record);
+            parent_path = project_path(parent->first) + "/projects";
         }
+        const auto path = parent_path + "/" + allocate_directory_name(record.native_title, "project", occupied_[parent_path]);
         project_paths_[id] = path;
         destinations_[id] = path + "/project.md";
         active_projects_.erase(id);
@@ -153,7 +136,8 @@ private:
             });
         if (!needed) return;
         const auto id = deterministic_uuid("synthetic:inbox|" + preview_.snapshot_inventory_hash_hex);
-        inbox_path_ = "projects/inbox--" + id.substr(0, 8);
+        inbox_path_ = "projects/" + allocate_directory_name("Inbox", "project", occupied_["projects"]);
+        preview_.generated_project_names[id] = "Inbox";
         project_paths_[id] = inbox_path_;
         destinations_[id] = inbox_path_ + "/project.md";
     }
@@ -162,9 +146,9 @@ private:
         const auto label = owner.substr(6);
         const auto existing = label_paths_.find(label);
         if (existing != label_paths_.end()) return existing->second;
-        const auto path = "projects/" + slug_file(label, "proj") + "--"
-            + deterministic_uuid(owner).substr(0, 8);
+        const auto path = "projects/" + allocate_directory_name(label, "project", occupied_["projects"]);
         const auto id = deterministic_uuid("labelproj:" + label);
+        preview_.generated_project_names[id] = label;
         label_paths_[label] = path;
         project_paths_[id] = path;
         destinations_[id] = path + "/project.md";
@@ -180,7 +164,8 @@ private:
         return inbox_path_.empty() ? "projects/unresolved" : inbox_path_;
     }
 
-    const TransferPreview& preview_;
+    TransferPreview& preview_;
+    std::map<std::string, std::set<std::string>> occupied_;
     RecordIndex records_;
     PathMap project_paths_;
     PathMap label_paths_;
@@ -208,7 +193,7 @@ std::vector<TransferDiagnostic> validate_import_graph(const TransferPreview& pre
     return diagnostics;
 }
 
-std::unordered_map<std::string, std::string> allocate_native_paths(const TransferPreview& preview) {
+std::unordered_map<std::string, std::string> allocate_native_paths(TransferPreview& preview) {
     return PathAllocator(preview).allocate();
 }
 

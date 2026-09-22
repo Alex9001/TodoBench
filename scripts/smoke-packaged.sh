@@ -10,6 +10,20 @@ fi
 binary=$1
 [ -x "$binary" ] || { echo "not an executable: $binary" >&2; exit 1; }
 
+if [ "$(uname -s)" = Darwin ]; then
+    case "$binary" in
+        *.app) bundle=$binary ;;
+        */Contents/MacOS/TodoBench) bundle=$(dirname "$(dirname "$(dirname "$binary")")") ;;
+        *) echo "Native macOS verification requires TodoBench.app or its bundled executable" >&2; exit 2 ;;
+    esac
+    smoke_install=$(mktemp -d)
+    trap 'rm -rf -- "$smoke_install"' EXIT
+    ditto "$bundle" "$smoke_install/TodoBench.app"
+    script_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+    python3 "$script_root/scripts/check-macos-startup.py" "$smoke_install/TodoBench.app" "$script_root/build/package-diagnostics/manual"
+    exit 0
+fi
+
 "$binary" --version | grep -q TodoBench
 "$binary" --help | grep -q TodoBench
 

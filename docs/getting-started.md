@@ -33,7 +33,7 @@ Click **Open tab…** beside the task tabs to choose a project or saved view. Cl
 
 Each tab starts in **List**, with a completion control beside the task title and metadata underneath. The disclosure arrow expands subtasks; **Space** completes or reopens the current task. Use the row's **…** menu, right-click, or **Shift+F10** for status, move, duplicate, subtask, and trash commands. **Status** offers all five states; completing a repeating task or a task with unfinished subtasks uses the same behavior from every entry point.
 
-Use the active tab's header for **Add task**, **Filter**, **Sort**, **List / Table**, and **Show / Hide details**. Table keeps comparison columns, with **Columns** choosing which metadata to show. Switching layouts retains selection, filters, sorting, and expanded subtasks. Multiple selection reveals the supported bulk action above the list. These choices and the details pane width are remembered with the workspace.
+Use the active tab's header for **Add task**, **Filter**, **Sort**, **List / Table**, and **Show / Hide details**. Table keeps comparison columns, with **Columns** choosing which metadata to show. Switching layouts retains selection, filters, sorting, and expanded subtasks. Multiple selection reveals **Change selected…**, with all five statuses, priorities, and Trash. Bulk completion affects selected tasks only and advances repeating tasks; bulk Trash includes descendants. Each bulk command is one undo entry. These choices and the details pane width are remembered with the workspace.
 
 The task title is editable at the top of details. Project and parent links navigate above it; property controls open their pickers nearby. Notes retain **Visual**, **Source**, and **History**, with save feedback beside the editor. **Subtasks** and **Attachments** show counts and their own Add controls. Activate an item with **Enter** or a double-click; attachment menus offer Open, Copy Markdown link, and Open containing folder.
 
@@ -67,3 +67,66 @@ When problems are found, expand **Show Details** to see their paths and messages
 Duplicate tasks retain the **Import as a separate task** recovery action. After
 editing files with another tool, use **File → Refresh** to scan again. Diagnostics
 does not inspect attachment contents or verify backups.
+
+## Undo and folder names
+
+Use **Edit → Undo** or **Ctrl+Z** (**Cmd+Z** on macOS) outside text fields to undo
+the latest task or project action. **Edit → Redo** uses the platform's standard
+redo shortcut. Inside text fields, these shortcuts always belong to the editor,
+even when its text history is empty.
+
+Task creation, duplication, edits, attachments, completion, recurrence, bulk
+changes, reordering, moves, deletion, and restoration share one timeline with
+project creation, renaming, and archiving. Consecutive autosaves in the same detail
+editing session form one action. Selecting another task, leaving the detail pane,
+explicitly saving, or performing another command ends that group. Pending edits
+must save successfully before workspace undo or redo can run.
+
+History lasts for the current session, keeps at most 100 actions (within a bounded
+backup budget), survives refresh, and clears when a different workspace opens.
+Restarting the application starts an empty history. Settings, view preferences,
+and whole-workspace import/export are outside undo. If external changes conflict
+with undo, TodoBench stops at that action and explains which file needs attention.
+
+New folders use readable names such as `projects/inbox/tasks/buy-milk/`, with
+`-2`, `-3`, and subsequent suffixes for collisions. Saving a changed title also
+renames its folder and updates local Markdown links. IDs remain stable. Existing
+workspaces are not bulk-renamed when opened.
+
+
+## Daily views and search
+
+**View → Today**, **Overdue**, and **Upcoming** also appear in **Open tab…**.
+They show unfinished tasks; Upcoming covers tomorrow through the next seven days.
+Dates follow the workspace time zone and update when the day changes. These views
+save relative filters, so reopening a Today tab does not pin it to yesterday.
+Search words match task titles and Markdown notes across the current view.
+Search does not index attachment contents. Advanced filters accept `due:today`,
+`due:overdue`, and `due:upcoming` alongside existing tags and states.
+
+## Manage projects and recover tasks
+
+**Project → Rename / Archive** uses the project scoped by the current filter or
+asks which project to use. Empty projects work without selecting a task.
+**Project → Archived Projects…** restores archived projects, even after restart.
+Archived projects and their descendants are excluded from normal task views and
+reminders; `include_archived:true` includes them in an advanced filter.
+
+**Task → Restore from Trash…** shows task titles, deletion times, and the original
+project names before restoration. Existing folders are preserved if names collide.
+When an external edit conflicts with your draft, the dialog displays both full
+copies, including properties, alongside a merged-notes editor. Saving merged notes
+keeps the draft's properties. If the disk copy changes again during review, reopen
+the comparison before choosing a version.
+
+## Review and snooze reminders
+
+**Task → Reminders** shows a persistent count and list of due and missed reminders.
+Open a task, snooze its reminder, or dismiss it. Clicking a desktop notification
+opens this list. A reminder can be snoozed after it has already fired; snoozes and
+dismissals survive restart. Completed, cancelled, and archived tasks do not notify.
+Reminders run while TodoBench is running; missed reminders appear when its workspace
+next opens. Due times use 09:00 in the workspace time zone.
+
+Launching TodoBench with a workspace folder while it is already running opens that
+folder in the existing window, using the same unsaved-edit checks as File → Open.

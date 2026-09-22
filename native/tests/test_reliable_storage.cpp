@@ -14,6 +14,7 @@
 #include <QByteArray>
 #include <QTemporaryDir>
 #include <QTest>
+#include "tb_test_assertions.h"
 
 #include <fstream>
 
@@ -28,6 +29,7 @@ private slots:
     void dirtyExternalChangeCreatesConflictCopy();
     void conflictResolutionKeepsChosenVersion();
     void monitorIgnoresUnchangedFilesystem();
+    void monitorTracksRecordsNamedAssets();
     void monitorNotifiesWhenTaskFileChanges();
     void workspaceLockRejectsSecondWriter();
     void historyStoreListsTaskSnapshots();
@@ -84,6 +86,12 @@ void ReliableStorageTest::trashRestorePreservesAssetsAndOriginalPath() {
     create_task_bundle(original, "123e4567-e89b-12d3-a456-426614174010");
     TrashStore trash(root);
     auto task = task_at(original / "task.md", "123e4567-e89b-12d3-a456-426614174010");
+    task.source_hash = WorkspaceStore::hash_bytes(serialize_task_markdown(task));
+    ProjectRecord project;
+    project.id = "123e4567-e89b-12d3-a456-426614174011";
+    project.display_name = "Project";
+    write_text(root / "projects" / "p" / "project.md", serialize_project_markdown(project));
+    task.project_id = project.id;
     const auto removed = trash.move_to_trash({task});
     QCOMPARE(removed.status, TrashStatus::Succeeded);
     QVERIFY(!std::filesystem::exists(original));
@@ -183,6 +191,25 @@ bool monitor_notifies_after_task_file_change(const std::filesystem::path& root) 
     return notifications >= 1;
 }
 }  // namespace
+
+void ReliableStorageTest::monitorTracksRecordsNamedAssets() {
+    QTemporaryDir temporary;
+    const auto root = std::filesystem::path(temporary.path().toStdString());
+    const auto path = root / "projects/assets/tasks/assets/task.md";
+    write_text(path, "first");
+    WorkspaceMonitor monitor;
+    int notifications = 0;
+    monitor.start(root, [&] { ++notifications; });
+    monitor.set_scan_interval(50);
+    write_text(path, "changed task");
+    QTest::qWait(400);
+    TB_VERIFY(notifications > 0);
+    notifications = 0;
+    write_text(path.parent_path() / "assets/task.md", "attachment, not a task");
+    QTest::qWait(400);
+    TB_COMPARE(notifications, 0);
+    monitor.stop();
+}
 
 void ReliableStorageTest::monitorIgnoresUnchangedFilesystem() {
     QTemporaryDir temporary;

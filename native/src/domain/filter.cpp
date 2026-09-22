@@ -83,13 +83,38 @@ bool parse_priority_list(const std::string& value, std::vector<Priority>& output
     return !output.empty();
 }
 
-bool due_matches(const TaskRecord& task, const FilterSpec& spec) {
-    if (!spec.due_from && !spec.due_to) return true;
+bool period_matches(const QDate& date, const std::string& period, const QDate& reference_date) {
+    if (period.empty()) return true;
+    const auto today = reference_date.isValid() ? reference_date : QDate::currentDate();
+    if (period == "today") return date == today;
+    if (period == "overdue") return date < today;
+    if (period == "upcoming") return date > today && date <= today.addDays(7);
+    return true;
+}
+
+bool due_matches(const TaskRecord& task, const FilterSpec& spec, const QDate& today) {
+    if (!spec.due_from && !spec.due_to && spec.due_period.empty()) return true;
     if (task.due_yaml.empty() || task.due_yaml == "null") return false;
     const auto date = QDate::fromString(QString::fromStdString(task.due_yaml).trimmed(), Qt::ISODate);
     if (!date.isValid()) return false;
+    if (!period_matches(date, spec.due_period, today)) return false;
     if (spec.due_from && date < *spec.due_from) return false;
     return !spec.due_to || date <= *spec.due_to;
+}
+
+bool apply_daily_filter(const std::string& key, const std::string& value, FilterCompileResult& result) {
+    if (key == "due") {
+        if (value != "today" && value != "overdue" && value != "upcoming") { result.error = "invalid due period"; return false; }
+        result.spec.due_period = value;
+        return true;
+    }
+    if (key == "include_archived") {
+        if (value != "true" && value != "false") { result.error = "include_archived must be true or false"; return false; }
+        result.spec.include_archived = value == "true";
+        return true;
+    }
+    result.error = "unknown filter field: " + key;
+    return false;
 }
 
 bool apply_named_filter(const std::string& key, const std::string& value, FilterCompileResult& result) {
@@ -125,19 +150,22 @@ bool apply_named_filter(const std::string& key, const std::string& value, Filter
         if (!parse_date(value, result.spec.due_to)) result.error = "invalid due_to date";
         return result.error.empty();
     }
-    result.error = "unknown filter field: " + key;
-    return false;
+    return apply_daily_filter(key, value, result);
 }
 
 bool title_matches(const TaskRecord& task, const FilterSpec& spec) {
+    if (spec.title_terms.empty() && spec.title_query.empty()) return true;
     const auto title = normalized(task.title);
-    for (const auto& term : spec.title_terms) {
-        if (title.find(normalized(term)) == std::string::npos) return false;
-    }
-    if (spec.title_terms.empty() && !spec.title_query.empty()) {
-        return title.find(normalized(spec.title_query)) != std::string::npos;
-    }
-    return true;
+    std::optional<std::string> notes;
+    const auto matches = [&](const std::string& term) {
+        const auto query = normalized(term);
+        if (title.find(query) != std::string::npos) return true;
+        if (task.body.empty()) return false;
+        if (!notes) notes = normalized(task.body);
+        return notes->find(query) != std::string::npos;
+    };
+    for (const auto& term : spec.title_terms) if (!matches(term)) return false;
+    return !spec.title_terms.empty() || spec.title_query.empty() || matches(spec.title_query);
 }
 
 bool tags_match(const TaskRecord& task, const FilterSpec& spec) {
@@ -227,19 +255,19 @@ FilterCompileResult compile_filter(const std::string& expression) {
     return result;
 }
 
-bool matches_filter(const TaskRecord& task, const FilterSpec& spec) {
+bool matches_filter(const TaskRecord& task, const FilterSpec& spec, const QDate& today) {
     if (!title_matches(task, spec)) return false;
     if (!spec.project_ids.empty() && !contains(spec.project_ids, task.project_id)) return false;
     if (!spec.statuses.empty() && std::find(spec.statuses.begin(), spec.statuses.end(), task.status) == spec.statuses.end()) return false;
     if (!spec.priorities.empty() && std::find(spec.priorities.begin(), spec.priorities.end(), task.priority) == spec.priorities.end()) return false;
     if (!tags_match(task, spec)) return false;
-    return due_matches(task, spec);
+    return due_matches(task, spec, today);
 }
 
-bool matches_filter(const TaskRecord& task, const FilterSpec& spec,
-                    const std::unordered_map<std::string, ProjectRecord>& projects) {
-    if (spec.project_ids.empty() || !spec.include_subprojects) return matches_filter(task, spec);
+FilterSpec expand_project_filter(const FilterSpec& spec, const std::unordered_map<std::string, ProjectRecord>& projects) {
+    if (spec.project_ids.empty() || !spec.include_subprojects) return spec;
     auto expanded = spec;
+    expanded.include_subprojects = false;
     expanded.project_ids.clear();
     for (const auto& selected : spec.project_ids) {
         for (const auto& resolved : resolve_project_filter(selected, projects)) {
@@ -247,7 +275,14 @@ bool matches_filter(const TaskRecord& task, const FilterSpec& spec,
             add_descendant_projects(resolved, projects, expanded.project_ids);
         }
     }
-    return matches_filter(task, expanded);
+    return expanded;
+}
+
+bool matches_filter(const TaskRecord& task, const FilterSpec& spec,
+                    const std::unordered_map<std::string, ProjectRecord>& projects, const QDate& today) {
+    if (!spec.include_archived && project_is_archived(task.project_id, projects)) return false;
+    if (spec.project_ids.empty() || !spec.include_subprojects) return matches_filter(task, spec, today);
+    return matches_filter(task, expand_project_filter(spec, projects), today);
 }
 
 }  // namespace todobench

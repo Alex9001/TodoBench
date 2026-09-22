@@ -14,6 +14,10 @@
 #include "storage/sample_workspaces.h"
 
 #include <QApplication>
+#include <QInputDialog>
+#include <QElapsedTimer>
+#include <QUuid>
+#include "storage/front_matter_codec.h"
 #include <QAction>
 #include <QCalendarWidget>
 #include <QFileDialog>
@@ -29,6 +33,7 @@
 #include <QTableView>
 #include <QPlainTextEdit>
 #include <QTest>
+#include "tb_test_assertions.h"
 #include <QTemporaryDir>
 #include <QTreeView>
 #include <QHeaderView>
@@ -52,6 +57,12 @@ class MainWindowTest final : public QObject {
     Q_OBJECT
 private slots:
     void emptyWorkspaceShellIsUsable();
+    void emptyProjectsCanBeManaged();
+    void reminderInboxRetainsMissedItems();
+    void dailyViewSearchesNotes();
+    void largeWorkspaceEditsKeepRows();
+    void undoShortcutsRespectTextFocus();
+    void failedSaveBlocksWorkspaceUndo();
     void diagnosticsExplainsWorkspaceState_data();
     void diagnosticsExplainsWorkspaceState();
     void workspaceRendersTaskMetadata();
@@ -242,6 +253,63 @@ void MainWindowTest::emptyWorkspaceShellIsUsable() {
     QVERIFY(shell_structure_is_valid(window));
     const auto screenshot = qEnvironmentVariable("TODOBENCH_TEST_SCREENSHOT");
     if (!screenshot.isEmpty()) QVERIFY(window.grab().save(screenshot));
+}
+
+void MainWindowTest::undoShortcutsRespectTextFocus() {
+    QTemporaryDir temporary;
+    const auto root = std::filesystem::path(temporary.path().toStdString()) / "workspace";
+    TB_VERIFY(seed_task(root));
+    MainWindow window;
+    window.open_workspace(root);
+    window.show();
+    QApplication::processEvents();
+    auto* tree = window.findChild<QTreeView*>("taskTree");
+    tree->setCurrentIndex(tree->model()->index(0, 0));
+    auto* title = window.findChild<QLineEdit*>("taskTitle");
+    TB_VERIFY(title);
+    auto* undo = named_action(window, "workspaceUndo");
+    auto* redo = named_action(window, "workspaceRedo");
+    title->setFocus();
+    title->selectAll();
+    QTest::keyClicks(title, "Updated title");
+    QTest::qWait(600);
+    TB_VERIFY(!undo->isEnabled());
+    title->setText("Updated title"); // clears native text undo
+    QTest::keySequence(title, QKeySequence::Undo);
+    TB_COMPARE(title->text(), QString("Updated title"));
+    tree->setFocus();
+    QApplication::processEvents();
+    TB_VERIFY(undo->isEnabled());
+    QTest::keySequence(tree, QKeySequence::Undo);
+    TB_COMPARE(WorkspaceScanner{}.scan(root).tasks.begin()->second.title, std::string("Polish release checklist"));
+    TB_VERIFY(redo->isEnabled());
+    QTest::keySequence(tree, QKeySequence::Redo);
+    TB_COMPARE(WorkspaceScanner{}.scan(root).tasks.begin()->second.title, std::string("Updated title"));
+}
+
+void MainWindowTest::failedSaveBlocksWorkspaceUndo() {
+    QTemporaryDir temporary;
+    const auto root = std::filesystem::path(temporary.path().toStdString()) / "workspace";
+    TB_VERIFY(seed_task(root));
+    MainWindow window;
+    window.open_workspace(root);
+    window.show();
+    auto* tree = window.findChild<QTreeView*>("taskTree");
+    tree->setCurrentIndex(tree->model()->index(0, 0));
+    auto* title = window.findChild<QLineEdit*>("taskTitle");
+    title->setFocus();
+    title->selectAll();
+    QTest::keyClicks(title, "Saved edit");
+    QTest::qWait(600);
+    title->clear();
+    tree->setFocus();
+    QApplication::processEvents();
+    auto* undo = named_action(window, "workspaceUndo");
+    TB_VERIFY(undo->isEnabled());
+    undo->trigger();
+    TB_COMPARE(WorkspaceScanner{}.scan(root).tasks.begin()->second.title, std::string("Saved edit"));
+    TB_VERIFY(undo->isEnabled());
+    title->setText("Saved edit"); // avoid leaving an invalid draft during widget teardown
 }
 
 void MainWindowTest::workspaceRendersTaskMetadata() {
@@ -1714,6 +1782,135 @@ void MainWindowTest::cancelThemeCustomizationPreservesSettings() {
     QCOMPARE(settings.theme, std::string("light"));
     QVERIFY(settings.theme_overrides.empty());
     QCOMPARE(QApplication::palette(), original_palette);
+}
+
+namespace {
+void answer_input(MainWindow& window, const QString& text = {}) {
+    QTimer::singleShot(0, &window, [text] {
+        auto* dialog = qobject_cast<QInputDialog*>(QApplication::activeModalWidget());
+        if (!dialog) return;
+        if (!text.isEmpty()) dialog->setTextValue(text);
+        dialog->accept();
+    });
+}
+bool inspect_reminders(MainWindow& window, bool dismiss) {
+    bool populated = false;
+    QTimer::singleShot(0, &window, [&] {
+        auto* dialog = window.findChild<QDialog*>("reminderInboxDialog");
+        if (!dialog) return;
+        populated = dialog->findChild<QListWidget*>("pendingReminders")->count() == 1;
+        if (dismiss) {
+            for (auto* button : dialog->findChildren<QPushButton*>()) if (button->text() == "Dismiss") button->click();
+        }
+        dialog->accept();
+    });
+    named_action(window, "reminderInbox")->trigger();
+    return populated;
+}
+void seed_large_workspace(const std::filesystem::path& root, int count) {
+    WorkspaceStore::create_workspace(root, "Large workspace");
+    const auto snapshot = WorkspaceScanner{}.scan(root);
+    const auto directory = std::filesystem::path(snapshot.projects.begin()->second.source_path).parent_path() / "tasks";
+    for (int index = 0; index < count; ++index) {
+        TaskRecord task;
+        task.id = QUuid::createUuid().toString(QUuid::WithoutBraces).toStdString();
+        task.title = "Task " + std::to_string(index);
+        task.order = index * 1024;
+        task.body = std::string(512, 'x');
+        task.created_at = "2026-09-22T09:00:00Z";
+        task.updated_at = task.created_at;
+        task.revision = task.id;
+        const auto folder = directory / std::to_string(index);
+        std::filesystem::create_directories(folder / "assets");
+        std::ofstream(folder / "task.md") << serialize_task_markdown(task);
+        std::ofstream(folder / "assets" / "file.bin") << std::string(1024, 'a');
+    }
+}
+}
+
+void MainWindowTest::emptyProjectsCanBeManaged() {
+    QTemporaryDir temporary;
+    const auto root = std::filesystem::path(temporary.path().toStdString()) / "workspace";
+    TB_COMPARE(WorkspaceStore::create_workspace(root, "Projects").status, SaveStatus::Saved);
+    MainWindow window;
+    window.open_workspace(root);
+    window.findChild<QLineEdit*>("taskFilter")->setText("project:Inbox");
+    answer_input(window, "Renamed empty project");
+    text_action(window, "&Rename...")->trigger();
+    auto snapshot = WorkspaceScanner{}.scan(root);
+    TB_COMPARE(snapshot.projects.begin()->second.display_name, std::string("Renamed empty project"));
+    text_action(window, "&Archive")->trigger();
+    TB_VERIFY(WorkspaceScanner{}.scan(root).projects.begin()->second.archived);
+    answer_input(window);
+    text_action(window, "Archived Projects…")->trigger();
+    TB_VERIFY(!WorkspaceScanner{}.scan(root).projects.begin()->second.archived);
+}
+
+void MainWindowTest::reminderInboxRetainsMissedItems() {
+    QTemporaryDir temporary;
+    const auto root = std::filesystem::path(temporary.path().toStdString()) / "workspace";
+    TB_VERIFY(seed_task(root));
+    auto reminder_task = WorkspaceScanner{}.scan(root).tasks.begin()->second;
+    reminder_task.due_yaml = QDate::currentDate().addDays(-1).toString(Qt::ISODate).toStdString();
+    TB_COMPARE(WorkspaceStore(root).save_task(reminder_task).status, SaveStatus::Saved);
+    {
+        MainWindow window;
+        window.open_workspace(root);
+        TB_VERIFY(inspect_reminders(window, false));
+    }
+    MainWindow reopened;
+    reopened.open_workspace(root);
+    TB_VERIFY(inspect_reminders(reopened, true));
+    TB_VERIFY(named_action(reopened, "reminderInbox")->text().contains("(0)"));
+    const auto settings = std::get<Settings>(load_settings(root / "settings.json"));
+    TB_COMPARE(settings.dismissed_reminder_keys.size(), size_t(1));
+}
+
+void MainWindowTest::dailyViewSearchesNotes() {
+    QTemporaryDir temporary;
+    const auto root = std::filesystem::path(temporary.path().toStdString()) / "workspace";
+    TB_VERIFY(seed_task(root));
+    auto task = WorkspaceScanner{}.scan(root).tasks.begin()->second;
+    task.body = "Need a rare kumquat";
+    task.due_yaml = QDateTime::currentDateTimeUtc().date().toString(Qt::ISODate).toStdString();
+    TB_COMPARE(WorkspaceStore(root).save_task(task).status, SaveStatus::Saved);
+    MainWindow window;
+    window.open_workspace(root);
+    named_action(window, "viewToday")->trigger();
+    auto* tree = window.findChild<QTreeView*>("taskTree");
+    TB_COMPARE(tree->model()->rowCount(), 1);
+    window.findChild<QLineEdit*>("taskFilter")->setText("kumquat due:today");
+    TB_COMPARE(tree->model()->rowCount(), 1);
+    named_action(window, "viewUpcoming")->trigger();
+    TB_COMPARE(tree->model()->rowCount(), 0);
+}
+
+void MainWindowTest::largeWorkspaceEditsKeepRows() {
+    QTemporaryDir temporary;
+    const auto root = std::filesystem::path(temporary.path().toStdString()) / "workspace";
+    seed_large_workspace(root, 1500);
+    MainWindow window;
+    QElapsedTimer elapsed;
+    elapsed.start();
+    window.open_workspace(root);
+    qInfo() << "1500 tasks and attachments: initial open ms" << elapsed.elapsed();
+    window.show();
+    auto* tree = window.findChild<QTreeView*>("taskTree");
+    TB_COMPARE(tree->model()->rowCount(), 1500);
+    tree->setCurrentIndex(tree->model()->index(0, 0));
+    const QPersistentModelIndex unchanged(tree->model()->index(1, 0));
+    auto* editor = window.findChild<QTextEdit*>("markdownVisual");
+    if (!editor) editor = window.findChild<QTextEdit*>();
+    TB_VERIFY(editor);
+    editor->setFocus();
+    editor->moveCursor(QTextCursor::End);
+    editor->insertPlainText("changed notes");
+    elapsed.restart();
+    text_action(window, "&Save Task")->trigger();
+    qInfo() << "1500 tasks: note save ms" << elapsed.elapsed();
+    TB_VERIFY(unchanged.isValid());
+    TB_COMPARE(tree->model()->rowCount(), 1500);
+    TB_VERIFY(elapsed.elapsed() < 5000);
 }
 
 int main(int argc, char** argv) {

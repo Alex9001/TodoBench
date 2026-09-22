@@ -32,3 +32,23 @@ Standalone 7-Zip (`7z` or `7zz`) is required for archive interoperability tests.
 Packaging entry points and remaining platform gaps are documented in `docs/packaging.md`.
 
 The public persisted-data contract is [workspace-format-v1.md](workspace-format-v1.md).
+
+
+## Workspace performance regression
+
+The main-window suite includes a 1,500-task workspace with notes and 1,500 attachment
+files. It reports initial-open and note-save times, and verifies that saving one
+note preserves unrelated persistent model indexes. Run it independently with:
+
+```bash
+QT_QPA_PLATFORM=offscreen python scripts/run-qt-test.py build/dev/test_main_window largeWorkspaceEditsKeepRows
+```
+
+Normal commands update affected records instead of reparsing every task. Task rows
+are retained when their identity and position are unchanged. External scan results
+run in a worker and are rejected if a newer command or workspace switch supersedes
+them. Filesystem notifications are debounced, watch registrations are updated by
+difference, and a background ten-second poll covers missed watcher events. Attachment
+directories are excluded from metadata polling. Initial workspace loading and
+transaction writes remain synchronous; benchmark results should not be presented
+as guarantees for network disks or arbitrarily large attachments.

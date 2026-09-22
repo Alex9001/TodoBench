@@ -56,6 +56,7 @@ struct Settings {
     std::vector<OpenViewTab> open_view_tabs;
     int active_view_tab{0};
     std::vector<std::string> delivered_reminder_keys;
+    std::vector<std::string> dismissed_reminder_keys;
     std::unordered_map<std::string, std::string> snoozed_reminder_until;
     std::vector<FormattingRule> formatting_rules;
     std::unordered_map<std::string, std::string> tag_colors;

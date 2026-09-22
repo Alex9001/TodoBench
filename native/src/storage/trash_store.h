@@ -23,6 +23,9 @@ struct TrashItem {
     std::string id;
     int affected_count{0};
     std::filesystem::path manifest_path;
+    std::string title;
+    std::string preview;
+    std::string deleted_at;
 };
 
 class TrashStore {

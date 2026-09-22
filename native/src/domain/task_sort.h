@@ -12,6 +12,7 @@ enum class TaskSort { Manual, Title, Priority, Due, Created, Updated };
 
 std::string to_string(TaskSort sort);
 bool parse_task_sort(const std::string& value, TaskSort& sort);
+std::vector<const TaskRecord*> sort_task_refs(std::vector<const TaskRecord*> tasks, TaskSort sort);
 std::vector<TaskRecord> sort_tasks(std::vector<TaskRecord> tasks, TaskSort sort);
 
 }  // namespace todobench

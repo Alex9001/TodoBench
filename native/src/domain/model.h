@@ -66,6 +66,8 @@ struct WorkspaceSnapshot {
     std::vector<Diagnostic> diagnostics;
 };
 
+bool project_is_archived(const std::string& id, const std::unordered_map<std::string, ProjectRecord>& projects);
+
 bool is_valid_uuid(const std::string& value);
 
 }  // namespace todobench

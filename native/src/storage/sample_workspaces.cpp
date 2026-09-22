@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "storage/sample_workspaces.h"
+#include "storage/directory_names.h"
 #include "storage/workspace_creation.h"
 #include "storage/workspace_scanner.h"
 #include "storage/settings_codec.h"
@@ -46,7 +47,7 @@ ProjectMap create_projects(const std::filesystem::path& root, const QJsonObject&
             project.parent_id = projects.at(parent).id;
             directory = std::filesystem::path(projects.at(parent).source_path).parent_path();
         }
-        project.source_path = (directory / "projects" / (text(source, "key") + "--" + project.id) / "project.md").string();
+        project.source_path = (allocate_directory(directory / "projects", project.display_name, "project") / "project.md").string();
         require_saved(store.save_project(project));
         projects.emplace(text(source, "key"), std::move(project));
     }
@@ -92,8 +93,7 @@ std::string create_tasks(const std::filesystem::path& root, const QJsonObject& w
         task.updated_at = task.created_at;
         task.revision = new_id();
         if (source.contains("parent")) task.parent_id = ids.at(text(source, "parent"));
-        task.source_path = (std::filesystem::path(project.source_path).parent_path() / "tasks"
-                            / (text(source, "key") + "--" + task.id) / "task.md").string();
+        task.source_path = (allocate_directory(std::filesystem::path(project.source_path).parent_path() / "tasks", task.title, "task") / "task.md").string();
         apply_sample_metadata(task, source);
         attach_brief(task, source);
         require_saved(store.create_task(task));

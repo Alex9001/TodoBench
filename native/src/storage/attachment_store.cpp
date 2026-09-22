@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "storage/attachment_store.h"
+#include "storage/command_transaction.h"
 
 #include <QUuid>
 
@@ -22,17 +23,12 @@ std::string safe_extension(const std::filesystem::path& source) {
 AttachmentResult AttachmentStore::import_file(const std::filesystem::path& task_directory,
                                               const std::filesystem::path& source) {
     if (!std::filesystem::is_regular_file(source)) return {false, {}, {}, "attachment source is not a regular file"};
-    const auto extension = safe_extension(source);
-    if (extension.empty() && !source.extension().empty()) return {false, {}, {}, "attachment extension contains unsafe characters"};
-    const auto filename = QUuid::createUuid().toString(QUuid::WithoutBraces).toStdString() + extension;
-    const auto assets = task_directory / "assets";
-    std::error_code error;
-    std::filesystem::create_directories(assets, error);
-    if (error) return {false, {}, {}, error.message()};
-    const auto destination = assets / filename;
-    std::filesystem::copy_file(source, destination, std::filesystem::copy_options::none, error);
-    if (error) return {false, {}, {}, error.message()};
-    return {true, "assets/" + filename, destination.string(), {}};
+    if (safe_extension(source).empty() && !source.extension().empty()) return {false, {}, {}, "attachment extension contains unsafe characters"};
+    if (CommandTransaction::current() && std::filesystem::file_size(source) > 64 * 1024 * 1024) return {false, {}, {}, "attachment exceeds the 64 MiB backup limit"};
+    std::ifstream input(source, std::ios::binary);
+    if (!input) return {false, {}, {}, "unable to read attachment"};
+    const std::string bytes{std::istreambuf_iterator<char>(input), std::istreambuf_iterator<char>()};
+    return import_bytes(task_directory, bytes, safe_extension(source));
 }
 
 AttachmentResult AttachmentStore::import_bytes(const std::filesystem::path& task_directory, const std::string& bytes,
@@ -45,6 +41,11 @@ AttachmentResult AttachmentStore::import_bytes(const std::filesystem::path& task
     }
     const auto filename = QUuid::createUuid().toString(QUuid::WithoutBraces).toStdString() + extension;
     const auto assets = task_directory / "assets";
+    if (auto* transaction = CommandTransaction::current()) {
+        const auto destination = assets / filename;
+        transaction->write(destination, bytes);
+        return {true, "assets/" + filename, destination.string(), {}};
+    }
     std::error_code error;
     std::filesystem::create_directories(assets, error);
     if (error) return {false, {}, {}, error.message()};

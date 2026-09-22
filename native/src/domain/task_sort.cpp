@@ -49,8 +49,8 @@ bool parse_task_sort(const std::string& value, TaskSort& sort) {
     return true;
 }
 
-std::vector<TaskRecord> sort_tasks(std::vector<TaskRecord> tasks, TaskSort sort) {
-    std::stable_sort(tasks.begin(), tasks.end(), [sort](const TaskRecord& left, const TaskRecord& right) {
+namespace {
+bool task_less(const TaskRecord& left, const TaskRecord& right, TaskSort sort) {
         switch (sort) {
         case TaskSort::Manual: return std::make_tuple(left.order, left.id) < std::make_tuple(right.order, right.id);
         case TaskSort::Title: return std::make_tuple(left.title, left.id) < std::make_tuple(right.title, right.id);
@@ -60,8 +60,15 @@ std::vector<TaskRecord> sort_tasks(std::vector<TaskRecord> tasks, TaskSort sort)
         case TaskSort::Updated: return std::make_tuple(left.updated_at, left.id) < std::make_tuple(right.updated_at, right.id);
         }
         return left.id < right.id;
-    });
+}
+}
+std::vector<const TaskRecord*> sort_task_refs(std::vector<const TaskRecord*> tasks, TaskSort sort) {
+    std::stable_sort(tasks.begin(), tasks.end(), [sort](const auto* left, const auto* right) { return task_less(*left, *right, sort); });
+    return tasks;
+}
+std::vector<TaskRecord> sort_tasks(std::vector<TaskRecord> tasks, TaskSort sort) {
+    std::stable_sort(tasks.begin(), tasks.end(), [sort](const auto& left, const auto& right) { return task_less(left, right, sort); });
     return tasks;
 }
 
-}  // namespace todobench
+} // namespace todobench

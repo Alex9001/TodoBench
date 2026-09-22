@@ -2,6 +2,9 @@
 #include "storage/workspace_store.h"
 
 #include "storage/front_matter_codec.h"
+#include "storage/directory_names.h"
+#include "storage/markdown_links.h"
+#include "storage/transactional_storage.h"
 #include "storage/settings_codec.h"
 #include "storage/conflict_copy.h"
 #include "storage/tutorial_workspace.h"
@@ -37,7 +40,7 @@ SaveResult create_empty_workspace(const std::filesystem::path& root, const std::
         if (error) return {SaveStatus::Error, root.string(), error.message()};
     }
     const auto project_id = QUuid::createUuid().toString(QUuid::WithoutBraces).toStdString();
-    const auto project_directory = root / "projects" / ("inbox--" + project_id);
+    const auto project_directory = allocate_directory(root / "projects", "Inbox", "project");
     std::filesystem::create_directories(project_directory / "tasks", error);
     if (error) return {SaveStatus::Error, project_directory.string(), error.message()};
     ProjectRecord inbox;
@@ -65,101 +68,89 @@ SaveResult WorkspaceStore::create_workspace(const std::filesystem::path& root, c
 }
 
 SaveResult WorkspaceStore::create_task(TaskRecord& task) const {
-    if (std::filesystem::exists(task.source_path)) return {SaveStatus::Conflict, task.source_path, "task already exists"};
-    const auto project_directory = std::filesystem::path(task.source_path).parent_path();
-    std::error_code error;
-    std::filesystem::create_directories(project_directory, error);
-    if (error) return {SaveStatus::Error, project_directory.string(), error.message()};
-    const auto content = serialize_task_markdown(task);
-    QSaveFile output(QString::fromStdString(task.source_path));
-    if (!output.open(QIODevice::WriteOnly)) return {SaveStatus::Error, task.source_path, output.errorString().toStdString()};
-    if (output.write(QByteArray::fromStdString(content)) != static_cast<qint64>(content.size()) || !output.commit()) {
-        return {SaveStatus::Error, task.source_path, output.errorString().toStdString()};
-    }
-    task.source_hash = hash_bytes(content);
-    return {SaveStatus::Saved, task.source_path, {}};
+    return storage_command(root_, [&](CommandTransaction& transaction) {
+        if (transaction.exists(task.source_path)) return SaveResult{SaveStatus::Conflict, task.source_path, "task already exists"};
+        const auto content = serialize_task_markdown(task);
+        transaction.write(task.source_path, content);
+        task.source_hash = hash_bytes(content);
+        return SaveResult{SaveStatus::Saved, task.source_path, {}};
+    });
 }
 
 std::string WorkspaceStore::hash_bytes(const std::string& bytes) {
-    const auto digest = QCryptographicHash::hash(QByteArray::fromStdString(bytes), QCryptographicHash::Sha256);
-    return digest.toHex().toStdString();
+    return QCryptographicHash::hash(QByteArray::fromStdString(bytes), QCryptographicHash::Sha256).toHex().toStdString();
 }
 
 SaveResult WorkspaceStore::move_task_branch(const std::vector<TaskRecord>& tasks,
                                             const std::filesystem::path& destination_tasks) const {
-    if (tasks.empty()) return {SaveStatus::Error, destination_tasks.string(), "no tasks selected"};
-    std::error_code error;
-    std::filesystem::create_directories(destination_tasks, error);
-    if (error) return {SaveStatus::Error, destination_tasks.string(), error.message()};
-    const auto journal_root = root_ / ".todobench" / "recovery";
-    std::filesystem::create_directories(journal_root, error);
-    if (error) return {SaveStatus::Error, journal_root.string(), error.message()};
-    std::vector<std::filesystem::path> destinations;
-    for (const auto& task : tasks) {
-        const auto source = std::filesystem::path(task.source_path).parent_path();
-        const auto destination = destination_tasks / source.filename();
-        if (std::filesystem::exists(destination)) return {SaveStatus::Conflict, destination.string(), "destination task already exists"};
-        destinations.push_back(destination);
-    }
-    std::vector<std::filesystem::path> moved;
-    for (size_t index = 0; index < tasks.size(); ++index) {
-        std::filesystem::rename(std::filesystem::path(tasks[index].source_path).parent_path(), destinations[index], error);
-        if (error) {
-            for (size_t rollback = 0; rollback < moved.size(); ++rollback) {
-                std::error_code rollback_error;
-                std::filesystem::rename(moved[rollback], std::filesystem::path(tasks[rollback].source_path).parent_path(), rollback_error);
-            }
-            return {SaveStatus::Error, tasks[index].source_path, error.message()};
+    return storage_command(root_, [&](CommandTransaction& transaction) {
+        DirectoryMoves moves;
+        SaveResult result{SaveStatus::Saved, destination_tasks.string(), {}};
+        std::set<std::string> occupied;
+        for (const auto& entry : transaction.children(destination_tasks)) occupied.insert(directory_key(entry.filename().string()));
+        for (const auto& task : tasks) {
+            const auto source = std::filesystem::path(task.source_path).parent_path();
+            const auto bytes = transaction.read(task.source_path);
+            if (hash_bytes(bytes) != task.source_hash) return SaveResult{SaveStatus::Conflict, task.source_path, "task changed before move"};
+            auto destination = destination_tasks / allocate_directory_name(task.title, "task", occupied);
+            moves.emplace_back(source, destination);
+            result.moved_paths.emplace_back(task.source_path, (destination / "task.md").string());
         }
-        moved.push_back(destinations[index]);
-    }
-    return {SaveStatus::Saved, destination_tasks.string(), {}};
+        rewrite_workspace_links(root_, moves);
+        for (const auto& [source, destination] : moves) transaction.move(source, destination);
+        return result;
+    });
 }
 
 SaveResult WorkspaceStore::save_project(const ProjectRecord& project) const {
-    const auto path = std::filesystem::path(project.source_path);
-    std::error_code error;
-    std::filesystem::create_directories(path.parent_path(), error);
-    if (error) return {SaveStatus::Error, path.string(), error.message()};
-    std::ifstream input(path, std::ios::binary);
-    const std::string current((std::istreambuf_iterator<char>(input)), std::istreambuf_iterator<char>());
-    input.close();
-    if (!project.source_hash.empty() && hash_bytes(current) != project.source_hash) {
-        std::string message;
-        const auto retained = retain_conflict(root_, project.id, current, serialize_project_markdown(project), message);
-        return {retained ? SaveStatus::Conflict : SaveStatus::Error, path.string(), message};
-    }
-    if (project.source_hash.empty() && std::filesystem::exists(path))
-        return {SaveStatus::Conflict, path.string(), "existing project must be loaded before saving"};
-    QSaveFile output(QString::fromStdString(path.string()));
-    if (!output.open(QIODevice::WriteOnly)) return {SaveStatus::Error, path.string(), output.errorString().toStdString()};
-    const auto content = serialize_project_markdown(project);
-    if (output.write(QByteArray::fromStdString(content)) != static_cast<qint64>(content.size()) || !output.commit()) {
-        return {SaveStatus::Error, path.string(), output.errorString().toStdString()};
-    }
-    return {SaveStatus::Saved, path.string(), {}};
+    return storage_command(root_, [&](CommandTransaction& transaction) {
+        const auto path = std::filesystem::path(project.source_path);
+        const auto exists = transaction.exists(path);
+        const auto current = exists ? transaction.read(path) : std::string{};
+        if ((!project.source_hash.empty() && hash_bytes(current) != project.source_hash) || (project.source_hash.empty() && exists)) {
+            std::string message;
+            const bool retained = retain_conflict(root_, project.id, current, serialize_project_markdown(project), message);
+            return SaveResult{retained ? SaveStatus::Conflict : SaveStatus::Error, path.string(), message};
+        }
+        auto destination = path.parent_path();
+        if (exists && path.parent_path() != root_) {
+            const auto parsed = parse_project_markdown(path.string(), current);
+            if (const auto* previous = std::get_if<ProjectRecord>(&parsed))
+                if (directory_base(previous->display_name, "project") != directory_base(project.display_name, "project"))
+                    destination = allocate_directory(destination.parent_path(), project.display_name, "project", destination);
+        }
+        transaction.write(path, serialize_project_markdown(project), project.source_hash);
+        const auto new_path = destination / "project.md";
+        if (destination != path.parent_path()) {
+            rewrite_workspace_links(root_, {{path.parent_path(), destination}});
+            transaction.move(path.parent_path(), destination);
+        }
+        return SaveResult{SaveStatus::Saved, new_path.string(), {}};
+    });
 }
 
 SaveResult WorkspaceStore::save_task(const TaskRecord& task) const {
-    const auto path = std::filesystem::path(task.source_path);
-    std::ifstream input(path, std::ios::binary);
-    if (!input.is_open()) {
-        if (std::filesystem::exists(path)) return {SaveStatus::Error, path.string(), "unable to read task before saving"};
-    }
-    const std::string current((std::istreambuf_iterator<char>(input)), std::istreambuf_iterator<char>());
-    input.close();
-    if (!task.source_hash.empty() && hash_bytes(current) != task.source_hash) {
-        return {SaveStatus::Conflict, path.string(), "task changed on disk while it was being edited"};
-    }
-    if (task.source_hash.empty() && std::filesystem::exists(path))
-        return {SaveStatus::Conflict, path.string(), "existing task must be loaded before saving"};
-    QSaveFile output(QString::fromStdString(path.string()));
-    if (!output.open(QIODevice::WriteOnly)) return {SaveStatus::Error, path.string(), output.errorString().toStdString()};
-    const auto content = serialize_task_markdown(task);
-    if (output.write(QByteArray::fromStdString(content)) != static_cast<qint64>(content.size()) || !output.commit()) {
-        return {SaveStatus::Error, path.string(), output.errorString().toStdString()};
-    }
-    return {SaveStatus::Saved, path.string(), {}};
+    return storage_command(root_, [&](CommandTransaction& transaction) {
+        const auto path = std::filesystem::path(task.source_path);
+        const auto exists = transaction.exists(path);
+        const auto current = exists ? transaction.read(path) : std::string{};
+        if ((!task.source_hash.empty() && hash_bytes(current) != task.source_hash) || (task.source_hash.empty() && exists))
+            return SaveResult{SaveStatus::Conflict, path.string(), "task changed on disk while it was being edited"};
+        auto destination = path.parent_path();
+        if (exists && path.parent_path() != root_) {
+            const auto parsed = parse_task_markdown(path.string(), current);
+            if (const auto* previous = std::get_if<TaskRecord>(&parsed))
+                if (directory_base(previous->title, "task") != directory_base(task.title, "task"))
+                    destination = allocate_directory(destination.parent_path(), task.title, "task", destination);
+        }
+        transaction.write(path, serialize_task_markdown(task), task.source_hash);
+        const auto new_path = destination / "task.md";
+        if (destination != path.parent_path()) {
+            rewrite_workspace_links(root_, {{path.parent_path(), destination}});
+            transaction.move(path.parent_path(), destination);
+        }
+        return SaveResult{SaveStatus::Saved, new_path.string(), {}};
+    });
 }
 
-}  // namespace todobench
+} // namespace todobench

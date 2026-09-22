@@ -1,44 +1,51 @@
-TodoBench 0.1.2 adds local mdbase conversion and a more capable task workspace.
+TodoBench 0.1.3 macOS beta adds startup diagnostics and safer workspace editing.
 
 ## What changed
 
-- **Local mdbase import and export.** File-menu wizards convert between TodoBench
-  workspaces and mdbase 0.3 collection folders without changing TodoBench's
-  native Markdown storage. Import supports type and record selection, field and
-  value mapping, project and parent repairs, a result preview, preserved source
-  provenance, and direct opening of the new workspace. Export preserves supporting
-  files and validates the collection before publishing it.
-- **List and Table task layouts.** Each view remembers its layout, visible columns,
-  expanded subtasks, selection, filters, and sorting. The task pane now uses square,
-  status-colored completion checkboxes and provides row menus plus clearer bulk
-  selection controls.
-- **Improved task details.** The details pane can be hidden per workspace, restores
-  its width, presents status and scheduling controls more directly, and lists
-  subtasks and attachments with their actions. Save state and conflicts are easier
-  to see, while pending edits are flushed before commands that change tasks.
-- **Safer setup and status changes.** Workspace creation handles trailing path
-  separators correctly, setup failures use an accessible focused alert, and an
-  explicit status choice now keeps the state the user selected.
+- Startup logs, **Help → Application Diagnostics**, and `--diagnostics` provide
+  version, architecture, runtime, and startup-stage information. `--safe-start`
+  bypasses remembered workspace restoration. Existing-instance activation now
+  acknowledges requests and forwards an explicitly requested workspace.
+- Task and project commands share session undo/redo with conflict checks,
+  transactional writes, bounded backups, and retained evidence if rollback fails.
+  Trash restore resolves projects by identity and handles destination collisions.
+- New and renamed folders use readable names. Rename and move commands update
+  local Markdown links while retaining stable task/project IDs.
+- Search includes notes; daily due filters, bulk priority/status changes, archived
+  project filtering, and the persistent reminder inbox improve daily workflows.
+- Workspace monitoring runs scans in the background; task edits retain unrelated
+  rows and reject stale scan results.
 
-Website: https://alex9001.github.io/TodoBench/
+## Beta downloads and installation
 
-## Downloads and installation
+The macOS tester packet contains both Intel and Apple Silicon DMGs, instructions,
+checksums, and build provenance. Choose the installer matching your Mac.
+Separate macOS application ZIPs, Linux packages, and Windows packages also accompany
+this release. Runtime libraries are bundled.
 
-Linux x86_64: AppImage or bundled portable tarball. Windows x64: portable ZIP or
-per-user installer. macOS: separate Intel and Apple Silicon application ZIPs and
-DMGs. Runtime libraries are bundled. Linux packages target Ubuntu 24.04 or
-compatible newer systems.
+macOS apps are ad-hoc signed and **not notarized**. See `instructions.md` in the
+packet for installation and first-launch guidance. Verify downloads against
+SHA256SUMS. Exact source, dependency source, notices, and build instructions
+accompany the binaries. This prerelease is for testing and is not the latest
+stable release.
 
-Packages have no publisher certificates. macOS apps are ad-hoc signed, without
-notarization. See the included installation guide for first-launch instructions.
-Verify downloads against SHA256SUMS. Exact source, dependency source, third-party
-notices, and build instructions accompany the binaries.
+## Verification and remaining uncertainty
+
+Publication requires all native build/test jobs, Linux sanitizer and quality
+checks, and package verification to pass. Both macOS architectures and both
+package formats require Cocoa/LaunchServices checks for first launch, explicit
+workspace, unavailable remembered workspace, safe start, and existing-instance
+activation, plus signing, architecture, deployment-target, and library checks.
+See the packet's build-info.txt for the exact commit, workflow, and results.
+
+These automated results are separate from tester feedback. The cause of the
+original reported macOS startup failure remains unconfirmed.
 
 ## Workspace compatibility
 
-Existing workspaces require no migration. The workspace format remains schema
-version 1. New view-presentation preferences are optional and older settings keep
-their defaults. mdbase import always creates a new workspace, and export always
-creates a new collection; neither operation changes its source.
+The workspace metadata schema remains version 1; existing workspaces need no
+bulk migration. New settings are optional. Renaming a task or project can rename
+its folder. Test on a copy of your workspace and keep a backup. Undo history is
+session-only. Trash manifests use version 2; legacy manifests remain readable.
 
 TodoBench is free software under GPL-3.0-or-later.

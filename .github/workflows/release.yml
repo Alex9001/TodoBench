@@ -81,6 +81,13 @@ jobs:
         run: scripts/package-windows.ps1 -Version $env:VERSION
       - name: Verify native packages
         run: python scripts/verify-packages.py dist
+      - name: Retain native startup diagnostics
+        if: always() && runner.os == 'macOS'
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08
+        with:
+          name: startup-diagnostics-${{ matrix.platform }}
+          path: build/package-diagnostics/
+          if-no-files-found: warn
       - name: Collect dependency source and build provenance
         env:
           RELEASE_PLATFORM: ${{ matrix.platform }}

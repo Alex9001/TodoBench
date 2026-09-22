@@ -17,9 +17,7 @@ namespace todobench::mdbase_transfer {
 std::vector<TransferDiagnostic> validate_import_graph(const TransferPreview& preview,
                                                       const ImportMapping& mapping);
 
-// Allocate project/task destination rels after graph validation (projects → "projects/<slug>--<id>/project.md",
-// tasks → "projects/<owner-slug>--<owner-id>/tasks/<slug>--<id>/task.md").
-// Uses deterministic slug from title or filename stem; collided slugs disambiguated within fixed preview.
-std::unordered_map<std::string, std::string> allocate_native_paths(const TransferPreview& preview);
+// Deterministic, portable, readable paths; generated projects retain explicit identities.
+std::unordered_map<std::string, std::string> allocate_native_paths(TransferPreview& preview);
 
 } // namespace todobench::mdbase_transfer

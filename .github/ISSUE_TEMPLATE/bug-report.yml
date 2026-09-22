@@ -5,14 +5,14 @@ body:
     id: version
     attributes:
       label: TodoBench version
-      placeholder: v0.1.1
+      placeholder: v0.1.3
     validations:
       required: true
   - type: input
     id: platform
     attributes:
-      label: Platform and package
-      placeholder: Windows 11 x64, portable ZIP
+      label: OS version, architecture, and exact downloaded filename
+      placeholder: macOS 15.7, Apple Silicon, TodoBench-0.1.3-macos-arm64.dmg
     validations:
       required: true
   - type: textarea
@@ -30,3 +30,14 @@ body:
       description: Screenshots or a small sample workspace can help explain the difference.
     validations:
       required: true
+  - type: textarea
+    id: startup
+    attributes:
+      label: Startup diagnostics (for launch failures)
+      description: |
+        Does a window appear, does the Dock icon keep bouncing, or does the process exit?
+        Include exact error text and approximate failure time. On macOS, attach terminal
+        launch output, Activity Monitor → TodoBench → Sample Process while hung, or the
+        relevant Console crash report if it exits. For builds supporting diagnostics,
+        include --diagnostics output, startup logs, and whether --safe-start opens.
+        Copyable installed-app commands: https://github.com/Alex9001/TodoBench/blob/main/docs/packaging.md#macos-startup-troubleshooting

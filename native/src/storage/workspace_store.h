@@ -14,6 +14,7 @@ struct SaveResult {
     SaveStatus status{SaveStatus::Error};
     std::string path;
     std::string message;
+    std::vector<std::pair<std::string, std::string>> moved_paths{};
 };
 
 class WorkspaceStore {

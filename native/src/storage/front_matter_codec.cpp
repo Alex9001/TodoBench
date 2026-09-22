@@ -80,6 +80,11 @@ YAML::Node parse_optional_node(const std::string& value) {
     try { return YAML::Load(value); } catch (const YAML::Exception&) { return YAML::Node(); }
 }
 
+std::string recurrence_text(const YAML::Node& metadata) {
+    const auto value = metadata["recurrence"];
+    return value && !value.IsNull() ? YAML::Dump(value) : "null";
+}
+
 std::string dump_document(const YAML::Node& metadata, const std::string& body) {
     std::ostringstream output;
     output << "---\n" << metadata << "\n---\n" << body;
@@ -109,7 +114,7 @@ TaskParseResult parse_task_markdown(const std::string& path, const std::string& 
         for (const auto& tag : metadata["tags"]) task.tags.push_back(tag.as<std::string>());
     }
     task.due_yaml = scalar(metadata, "due", "null");
-    task.recurrence_yaml = metadata["recurrence"] ? YAML::Dump(metadata["recurrence"]) : "null";
+    task.recurrence_yaml = recurrence_text(metadata);
     task.reminders_yaml = metadata["reminders"] ? YAML::Dump(metadata["reminders"]) : "[]";
     task.order = metadata["order"] ? metadata["order"].as<long long>() : 1024;
     task.created_at = scalar(metadata, "created_at");

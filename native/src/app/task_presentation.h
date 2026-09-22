@@ -52,6 +52,11 @@ void append_task_tree(QStandardItem* parent, const std::string& parent_id,
                       const std::string& project_context = {},
                       const TaskProgressMap* progress = nullptr);
 
+void sync_task_rows(QStandardItem* parent, const std::vector<const TaskRecord*>& tasks,
+                    const std::unordered_map<std::string, std::vector<const TaskRecord*>>& children,
+                    const Settings& settings, const WorkspaceSnapshot& snapshot, const std::string& context,
+                    const TaskProgressMap& progress, std::unordered_map<std::string, std::string>& rendered);
+
 class TaskTreeView final : public QTreeView {
     Q_OBJECT
 

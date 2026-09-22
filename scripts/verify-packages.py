@@ -3,6 +3,8 @@
 from pathlib import Path
 import os
 import platform
+import plistlib
+import re
 import shutil
 import signal
 import subprocess
@@ -29,7 +31,7 @@ def smoke(binary, state):
     fixture = Path(__file__).resolve().parents[1] / 'docs/fixtures/workspace-v1'
     workspace = state / 'workspace'
     shutil.copytree(fixture, workspace, dirs_exist_ok=True)
-    process = subprocess.Popen([str(binary), str(workspace)], env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, start_new_session=(os.name != "nt"))
+    process = subprocess.Popen([str(binary), '--state-dir', str(state / 'app-state'), str(workspace)], env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, start_new_session=(os.name != "nt"))
     try:
         time.sleep(3)
         assert process.poll() is None, process.communicate()
@@ -44,7 +46,36 @@ def smoke(binary, state):
         process.communicate(timeout=15)
 
 
+def native_macos_smoke(bundle, stage, package):
+    install = stage / 'installation'
+    install.mkdir(exist_ok=True)
+    installed = install / 'TodoBench.app'
+    run('ditto', str(bundle), str(installed))
+    check_macos(installed)
+    artifacts = Path('build/package-diagnostics').resolve() / package.name
+    subprocess.run([sys.executable, str(Path(__file__).with_name('check-macos-startup.py')),
+                    str(installed), str(artifacts)], check=True)
+
+
+def macos_minimum(binary):
+    commands = run('otool', '-l', str(binary))
+    found = re.search(r'\bminos\s+(\d+(?:\.\d+)*)', commands)
+    if found is None:
+        found = re.search(r'LC_VERSION_MIN_MACOSX.*?\bversion\s+(\d+(?:\.\d+)*)', commands, re.S)
+    assert found, f'deployment target missing: {binary}'
+    return tuple(map(int, found.group(1).split('.'))) + (0,) * (3 - len(found.group(1).split('.')))
+
+
 def check_macos(bundle):
+    binary = bundle / 'Contents/MacOS/TodoBench'
+    architecture = platform.machine()
+    assert architecture in run('lipo', '-archs', str(binary)).split(), 'package architecture mismatch'
+    with (bundle / 'Contents/Info.plist').open('rb') as source:
+        info = plistlib.load(source)
+    assert info['CFBundleExecutable'] == 'TodoBench'
+    minimum = macos_minimum(binary)
+    system_version = tuple(map(int, platform.mac_ver()[0].split('.')))
+    assert system_version + (0,) * (3 - len(system_version)) >= minimum, 'deployment target exceeds runner OS'
     run('codesign', '--verify', '--deep', '--strict', str(bundle))
     assert (bundle / 'Contents/Resources/todobench.icns').is_file()
     for file in (bundle / 'Contents').rglob('*'):
@@ -52,6 +83,9 @@ def check_macos(bundle):
             continue
         result = subprocess.run(['otool', '-L', str(file)], capture_output=True, text=True)
         assert '/opt/homebrew/' not in result.stdout and '/usr/local/opt/' not in result.stdout, result.stdout
+        if result.returncode == 0:
+            assert architecture in run('lipo', '-archs', str(file)).split(), f'library architecture mismatch: {file}'
+            assert macos_minimum(file) <= minimum, f'library deployment target exceeds app target: {file}'
 
 
 def verify_archive(package, stage):
@@ -66,8 +100,8 @@ def verify_archive(package, stage):
         run('ditto', '-x', '-k', str(package), str(extracted)) if platform.system() == 'Darwin' else zipfile.ZipFile(package).extractall(extracted)
         if platform.system() == 'Darwin':
             bundle = next(extracted.glob('*.app'))
-            check_macos(bundle)
-            binary = bundle / 'Contents/MacOS/TodoBench'
+            native_macos_smoke(bundle, stage, package)
+            return
         else:
             binary = next(extracted.rglob('TodoBench.exe'))
             assert (binary.parent / 'Qt6Core.dll').is_file()
@@ -80,8 +114,7 @@ def verify_installer(package, stage):
         run('hdiutil', 'attach', '-nobrowse', '-mountpoint', str(mount), str(package))
         try:
             bundle = mount / 'TodoBench.app'
-            check_macos(bundle)
-            smoke(bundle / 'Contents/MacOS/TodoBench', stage)
+            native_macos_smoke(bundle, stage, package)
         finally:
             run('hdiutil', 'detach', str(mount))
     else:

@@ -426,6 +426,52 @@ void append_task_tree(QStandardItem* parent, const std::string& parent_id,
     }
 }
 
+namespace {
+void update_row_data(QStandardItem* parent, int index, const QList<QStandardItem*>& row) {
+    const std::vector<int> roles{Qt::DisplayRole, Qt::DecorationRole, Qt::ToolTipRole, Qt::FontRole, Qt::ForegroundRole,
+        Qt::BackgroundRole, Qt::AccessibleTextRole, Qt::AccessibleDescriptionRole, TaskIdRole, TaskStatusRole,
+        TaskMetadataRole, TaskProgressRole, TaskCompletionRole, TaskTitleRole};
+    for (int column = 0; column < row.size(); ++column) {
+        auto* existing = parent->child(index, column);
+        for (const auto role : roles) if (existing->data(role) != row[column]->data(role)) existing->setData(row[column]->data(role), role);
+        existing->setFlags(row[column]->flags());
+        delete row[column];
+    }
+}
+std::string row_key(const TaskRecord& task, const Settings& settings, const WorkspaceSnapshot& snapshot,
+                    const std::string& context, const TaskProgressMap& progress) {
+    const auto counts = progress.find(task.id);
+    const auto project = snapshot.projects.find(task.project_id);
+    return task.source_hash + settings.source_hash + context + task.project_id
+        + (project == snapshot.projects.end() ? "" : project->second.display_name)
+        + (counts == progress.end() ? "" : std::to_string(counts->second.completed) + "/" + std::to_string(counts->second.total));
+}
+}
+
+void sync_task_rows(QStandardItem* parent, const std::vector<const TaskRecord*>& tasks,
+                    const std::unordered_map<std::string, std::vector<const TaskRecord*>>& children,
+                    const Settings& settings, const WorkspaceSnapshot& snapshot, const std::string& context,
+                    const TaskProgressMap& progress, std::unordered_map<std::string, std::string>& rendered) {
+    for (size_t index = 0; index < tasks.size(); ++index) {
+        const auto& task = *tasks[index];
+        const auto key = row_key(task, settings, snapshot, context, progress);
+        auto* item = parent->child(static_cast<int>(index));
+        if (!item || item->data(TaskIdRole).toString().toStdString() != task.id) {
+            if (item) parent->removeRows(static_cast<int>(index), parent->rowCount() - static_cast<int>(index));
+            parent->appendRow(make_task_row(task, settings, snapshot, context, &progress));
+            rendered[task.id] = key;
+        } else if (rendered[task.id] != key) {
+            update_row_data(parent, static_cast<int>(index), make_task_row(task, settings, snapshot, context, &progress));
+            rendered[task.id] = key;
+        }
+        auto* row = parent->child(static_cast<int>(index));
+        const auto found = children.find(task.id);
+        const std::vector<const TaskRecord*> empty;
+        sync_task_rows(row, found == children.end() ? empty : found->second, children, settings, snapshot, context, progress, rendered);
+    }
+    if (parent->rowCount() > static_cast<int>(tasks.size())) parent->removeRows(static_cast<int>(tasks.size()), parent->rowCount() - static_cast<int>(tasks.size()));
+}
+
 TaskTreeView::TaskTreeView(QWidget* parent) : QTreeView(parent) {
     list_delegate_ = new TaskListDelegate(this);
     table_delegate_ = new TaskTableDelegate(this);

@@ -7,6 +7,7 @@
 
 #include <QDateTime>
 #include <QTest>
+#include "tb_test_assertions.h"
 #include <QTimeZone>
 
 #include <algorithm>
@@ -19,6 +20,9 @@ class DomainTest final : public QObject {
     Q_OBJECT
 private slots:
     void typedFiltersMatchTasks();
+    void dailyViewsAndNotesSearch();
+    void snoozeAfterDelivery();
+    void archivedProjectsAreExcluded();
     void invalidFilterRetainsError();
     void filterSessionRetainsLastValidResults();
     void filterSessionRemovesTokens();
@@ -39,6 +43,41 @@ private slots:
     void schedulerMissedSummaryHonorsSnooze();
     void schedulerSnoozeStateRestores();
 };
+
+void DomainTest::dailyViewsAndNotesSearch() {
+    TaskRecord task;
+    task.title = "Shopping";
+    task.body = "Remember oat milk";
+    task.due_yaml = "2026-09-22";
+    const auto today = QDate(2026, 9, 22);
+    TB_VERIFY(matches_filter(task, compile_filter("oat milk due:today").spec, today));
+    TB_VERIFY(!matches_filter(task, compile_filter("due:today").spec, today.addDays(1)));
+    TB_VERIFY(matches_filter(task, compile_filter("due:overdue").spec, today.addDays(1)));
+    TB_VERIFY(matches_filter(task, compile_filter("due:upcoming").spec, today.addDays(-7)));
+    TB_VERIFY(!matches_filter(task, compile_filter("due:upcoming").spec, today.addDays(-8)));
+    TB_VERIFY(!compile_filter("due:unknown").error.empty());
+}
+
+void DomainTest::snoozeAfterDelivery() {
+    const auto now = QDateTime::currentDateTimeUtc();
+    const auto reminder = schedule_reminders("task", "occurrence", now, {{"due", 0}}).front();
+    ReminderScheduler scheduler([](const auto&) { return true; });
+    scheduler.replace_schedule({reminder});
+    TB_COMPARE(scheduler.deliver_due(now), size_t(1));
+    TB_VERIFY(scheduler.snooze(reminder, now.addSecs(600)));
+    TB_COMPARE(scheduler.deliver_due(now.addSecs(599)), size_t(0));
+    TB_COMPARE(scheduler.deliver_due(now.addSecs(600)), size_t(1));
+}
+
+void DomainTest::archivedProjectsAreExcluded() {
+    ProjectRecord parent, child;
+    parent.id = "parent"; parent.archived = true;
+    child.id = "child"; child.parent_id = parent.id;
+    const std::unordered_map<std::string, ProjectRecord> projects{{parent.id, parent}, {child.id, child}};
+    TaskRecord task; task.project_id = child.id;
+    TB_VERIFY(!matches_filter(task, compile_filter("").spec, projects));
+    TB_VERIFY(matches_filter(task, compile_filter("include_archived:true").spec, projects));
+}
 
 void DomainTest::typedFiltersMatchTasks() {
     TaskRecord task;

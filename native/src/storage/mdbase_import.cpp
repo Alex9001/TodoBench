@@ -2335,32 +2335,6 @@ private:
       // Also copy mapping preview? Already in records
     }
   }
-  static std::string synthetic_project_display(const std::string &rel) {
-    if (rel.find("inbox") != std::string::npos)
-      return "Inbox";
-    std::string slug = std::filesystem::path(rel)
-                           .parent_path()
-                           .filename()
-                           .string();
-    if (const auto separator = slug.rfind("--"); separator != std::string::npos)
-      slug.erase(separator);
-    std::string display;
-    bool capitalize = true;
-    for (const char character : slug) {
-      if (character == '-' || character == '_') {
-        display.push_back(' ');
-        capitalize = true;
-        continue;
-      }
-      display.push_back(capitalize
-                            ? static_cast<char>(std::toupper(
-                                  static_cast<unsigned char>(character)))
-                            : character);
-      capitalize = false;
-    }
-    return display.empty() ? "Imported Project" : display;
-  }
-
   bool is_unmaterialized_synthetic_project(
       const std::string &nativeId, const std::string &rel,
       const std::unordered_set<std::string> &recordNativeIds) const {
@@ -2374,7 +2348,7 @@ private:
                                const std::string &rel) {
     ProjectRecord project;
     project.id = nativeId;
-    project.display_name = synthetic_project_display(rel);
+    project.display_name = preview.generated_project_names.at(nativeId);
     project.order = 0;
     project.archived = false;
     project.source_path = portable(staged / rel);
