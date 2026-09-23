@@ -1,51 +1,34 @@
-TodoBench 0.1.3 macOS beta adds startup diagnostics and safer workspace editing.
+TodoBench 0.1.3 is available for Linux, Windows, and macOS.
+
+## Downloads
+
+| Operating system | Installer | Portable package |
+| --- | --- | --- |
+| Linux x86_64 | [AppImage](https://github.com/Alex9001/TodoBench/releases/download/v0.1.3/TodoBench-0.1.3-linux-x86_64.AppImage) | [tar.gz](https://github.com/Alex9001/TodoBench/releases/download/v0.1.3/TodoBench-0.1.3-linux-x86_64.tar.gz) |
+| Windows x64 | [Per-user installer](https://github.com/Alex9001/TodoBench/releases/download/v0.1.3/TodoBench-0.1.3-windows-x64-setup.exe) | [ZIP](https://github.com/Alex9001/TodoBench/releases/download/v0.1.3/TodoBench-0.1.3-windows-x64.zip) |
+| macOS Apple Silicon | [DMG](https://github.com/Alex9001/TodoBench/releases/download/v0.1.3/TodoBench-0.1.3-macos-arm64.dmg) | [Application ZIP](https://github.com/Alex9001/TodoBench/releases/download/v0.1.3/TodoBench-0.1.3-macos-arm64.zip) |
+| macOS Intel | [DMG](https://github.com/Alex9001/TodoBench/releases/download/v0.1.3/TodoBench-0.1.3-macos-x86_64.dmg) | [Application ZIP](https://github.com/Alex9001/TodoBench/releases/download/v0.1.3/TodoBench-0.1.3-macos-x86_64.zip) |
+
+Runtime libraries are bundled. Linux targets Ubuntu 24.04 or compatible newer systems. Windows packages have no publisher certificate. macOS apps are ad-hoc signed and not notarized; see the [installation guide](https://github.com/Alex9001/TodoBench/blob/main/docs/packaging.md#packages-and-unsigned-installation) for first-launch steps.
+
+[SHA-256 checksums](https://github.com/Alex9001/TodoBench/releases/download/v0.1.3/SHA256SUMS) and [corresponding source and build information](https://github.com/Alex9001/TodoBench/releases/download/v0.1.3/zz-TodoBench-0.1.3-source-and-build-info.zip) are also available.
 
 ## What changed
 
-- Startup logs, **Help → Application Diagnostics**, and `--diagnostics` provide
-  version, architecture, runtime, and startup-stage information. `--safe-start`
-  bypasses remembered workspace restoration. Existing-instance activation now
-  acknowledges requests and forwards an explicitly requested workspace.
-- Task and project commands share session undo/redo with conflict checks,
-  transactional writes, bounded backups, and retained evidence if rollback fails.
-  Trash restore resolves projects by identity and handles destination collisions.
-- New and renamed folders use readable names. Rename and move commands update
-  local Markdown links while retaining stable task/project IDs.
-- Search includes notes; daily due filters, bulk priority/status changes, archived
-  project filtering, and the persistent reminder inbox improve daily workflows.
-- Workspace monitoring runs scans in the background; task edits retain unrelated
-  rows and reject stale scan results.
+- Startup logs, **Help → Application Diagnostics**, and `--diagnostics` provide version, architecture, runtime, and startup-stage information. `--safe-start` bypasses remembered workspace restoration. Existing-instance activation now acknowledges requests and forwards an explicitly requested workspace.
+- Task and project commands share session undo/redo with conflict checks, transactional writes, bounded backups, and retained evidence if rollback fails. Trash restore resolves projects by identity and handles destination collisions.
+- New and renamed folders use readable names. Rename and move commands update local Markdown links while retaining stable task and project IDs.
+- Search includes notes; daily due filters, bulk priority and status changes, archived project filtering, and the persistent reminder inbox improve daily workflows.
+- Workspace monitoring runs scans in the background; task edits retain unrelated rows and reject stale scan results.
 
-## Beta downloads and installation
+## macOS tester packet
 
-The macOS tester packet contains both Intel and Apple Silicon DMGs, instructions,
-checksums, and build provenance. Choose the installer matching your Mac.
-Separate macOS application ZIPs, Linux packages, and Windows packages also accompany
-this release. Runtime libraries are bundled.
+The [macOS tester packet](https://github.com/Alex9001/TodoBench/releases/download/v0.1.3/zz-TodoBench-0.1.3-macos-tester-packet.zip) contains both DMGs, installation and test instructions, checksums, and build results. Send that one link to a tester. The original reported macOS startup failure remains unconfirmed; tester feedback has not yet been collected.
 
-macOS apps are ad-hoc signed and **not notarized**. See `instructions.md` in the
-packet for installation and first-launch guidance. Verify downloads against
-SHA256SUMS. Exact source, dependency source, notices, and build instructions
-accompany the binaries. This prerelease is for testing and is not the latest
-stable release.
+## Verification and compatibility
 
-## Verification and remaining uncertainty
+All Linux, Windows, and macOS native build and test jobs, Linux sanitizer and quality checks, and package verification passed for [source commit `ed10b657`](https://github.com/Alex9001/TodoBench/commit/ed10b65776e366e853482a29be871aad3aa6f722) in [this workflow run](https://github.com/Alex9001/TodoBench/actions/runs/35794883909). Both macOS architectures and both package formats passed native Cocoa/LaunchServices launch scenarios, plus signing, architecture, deployment-target, and bundled-library checks.
 
-Publication requires all native build/test jobs, Linux sanitizer and quality
-checks, and package verification to pass. Both macOS architectures and both
-package formats require Cocoa/LaunchServices checks for first launch, explicit
-workspace, unavailable remembered workspace, safe start, and existing-instance
-activation, plus signing, architecture, deployment-target, and library checks.
-See the packet's build-info.txt for the exact commit, workflow, and results.
-
-These automated results are separate from tester feedback. The cause of the
-original reported macOS startup failure remains unconfirmed.
-
-## Workspace compatibility
-
-The workspace metadata schema remains version 1; existing workspaces need no
-bulk migration. New settings are optional. Renaming a task or project can rename
-its folder. Test on a copy of your workspace and keep a backup. Undo history is
-session-only. Trash manifests use version 2; legacy manifests remain readable.
+Workspace metadata remains schema version 1; existing workspaces need no bulk migration. New settings are optional. Renaming a task or project can rename its folder, so keep a backup. Undo history is session-only. Trash manifests use version 2; legacy manifests remain readable.
 
 TodoBench is free software under GPL-3.0-or-later.

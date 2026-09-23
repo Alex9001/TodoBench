@@ -49,18 +49,18 @@ TodoBench keeps your project tabs and task list beside the details of the select
 
 ## Download
 
-**[TodoBench v0.1.2](https://github.com/Alex9001/TodoBench/releases/tag/v0.1.2)** is available for all four targets below. Runtime libraries are bundled; you do not need a separate Qt installation.
+**[TodoBench v0.1.3](https://github.com/Alex9001/TodoBench/releases/tag/v0.1.3)** is available for all four targets below. Runtime libraries are bundled; you do not need a separate Qt installation.
 
 | Platform | Install | Portable |
 | --- | --- | --- |
-| Linux x86_64 | [AppImage](https://github.com/Alex9001/TodoBench/releases/download/v0.1.2/TodoBench-0.1.2-linux-x86_64.AppImage) | [Bundled tar.gz](https://github.com/Alex9001/TodoBench/releases/download/v0.1.2/TodoBench-0.1.2-linux-x86_64.tar.gz) |
-| Windows x64 | [Per-user installer](https://github.com/Alex9001/TodoBench/releases/download/v0.1.2/TodoBench-0.1.2-windows-x64-setup.exe) | [ZIP](https://github.com/Alex9001/TodoBench/releases/download/v0.1.2/TodoBench-0.1.2-windows-x64.zip) |
-| macOS Apple Silicon | [DMG](https://github.com/Alex9001/TodoBench/releases/download/v0.1.2/TodoBench-0.1.2-macos-arm64.dmg) | [Application ZIP](https://github.com/Alex9001/TodoBench/releases/download/v0.1.2/TodoBench-0.1.2-macos-arm64.zip) |
-| macOS Intel | [DMG](https://github.com/Alex9001/TodoBench/releases/download/v0.1.2/TodoBench-0.1.2-macos-x86_64.dmg) | [Application ZIP](https://github.com/Alex9001/TodoBench/releases/download/v0.1.2/TodoBench-0.1.2-macos-x86_64.zip) |
+| Linux x86_64 | [AppImage](https://github.com/Alex9001/TodoBench/releases/download/v0.1.3/TodoBench-0.1.3-linux-x86_64.AppImage) | [Bundled tar.gz](https://github.com/Alex9001/TodoBench/releases/download/v0.1.3/TodoBench-0.1.3-linux-x86_64.tar.gz) |
+| Windows x64 | [Per-user installer](https://github.com/Alex9001/TodoBench/releases/download/v0.1.3/TodoBench-0.1.3-windows-x64-setup.exe) | [ZIP](https://github.com/Alex9001/TodoBench/releases/download/v0.1.3/TodoBench-0.1.3-windows-x64.zip) |
+| macOS Apple Silicon | [DMG](https://github.com/Alex9001/TodoBench/releases/download/v0.1.3/TodoBench-0.1.3-macos-arm64.dmg) | [Application ZIP](https://github.com/Alex9001/TodoBench/releases/download/v0.1.3/TodoBench-0.1.3-macos-arm64.zip) |
+| macOS Intel | [DMG](https://github.com/Alex9001/TodoBench/releases/download/v0.1.3/TodoBench-0.1.3-macos-x86_64.dmg) | [Application ZIP](https://github.com/Alex9001/TodoBench/releases/download/v0.1.3/TodoBench-0.1.3-macos-x86_64.zip) |
 
 Linux packages target Ubuntu 24.04 or compatible newer systems. Make the AppImage executable before opening it; without FUSE, use `APPIMAGE_EXTRACT_AND_RUN=1`. Windows packages have no publisher certificate. macOS apps are ad-hoc signed, without notarization. See the [installation guide](docs/packaging.md#packages-and-unsigned-installation) for first-launch steps.
 
-Every release includes [SHA-256 checksums](https://github.com/Alex9001/TodoBench/releases/download/v0.1.2/SHA256SUMS), the exact application source, dependency source, and build instructions. [All releases →](https://github.com/Alex9001/TodoBench/releases)
+The release includes [SHA-256 checksums](https://github.com/Alex9001/TodoBench/releases/download/v0.1.3/SHA256SUMS), [corresponding source and build information](https://github.com/Alex9001/TodoBench/releases/download/v0.1.3/zz-TodoBench-0.1.3-source-and-build-info.zip), and a [macOS tester packet](https://github.com/Alex9001/TodoBench/releases/download/v0.1.3/zz-TodoBench-0.1.3-macos-tester-packet.zip). [All releases →](https://github.com/Alex9001/TodoBench/releases)
 
 ## Quick start
 
