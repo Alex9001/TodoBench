@@ -31,8 +31,9 @@ compatible user-built libraries; no publisher key is required to run modificatio
 
 ## Packages and unsigned installation
 
-Check `SHA256SUMS` after downloading. Linux/macOS: `sha256sum -c SHA256SUMS` or
-`shasum -a 256 -c SHA256SUMS`. Windows: compare `Get-FileHash -Algorithm SHA256`
+Check the release's SHA-256 checksums file after downloading. Linux/macOS:
+`sha256sum -c <checksums-file>` or `shasum -a 256 -c <checksums-file>`.
+Windows: compare `Get-FileHash -Algorithm SHA256`
 with the corresponding line. Download only from the project's release page.
 
 - **Linux x86_64:** make the AppImage executable and launch it. If FUSE is

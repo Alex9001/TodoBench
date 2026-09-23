@@ -11,7 +11,7 @@ TodoBench 0.1.3 is available for Linux, Windows, and macOS.
 
 Runtime libraries are bundled. Linux targets Ubuntu 24.04 or compatible newer systems. Windows packages have no publisher certificate. macOS apps are ad-hoc signed and not notarized; see the [installation guide](https://github.com/Alex9001/TodoBench/blob/main/docs/packaging.md#packages-and-unsigned-installation) for first-launch steps.
 
-[SHA-256 checksums](https://github.com/Alex9001/TodoBench/releases/download/v0.1.3/SHA256SUMS) and [corresponding source and build information](https://github.com/Alex9001/TodoBench/releases/download/v0.1.3/zz-TodoBench-0.1.3-source-and-build-info.zip) are also available.
+[SHA-256 checksums](https://github.com/Alex9001/TodoBench/releases/download/v0.1.3/zz-TodoBench-0.1.3-SHA256SUMS.txt) and [corresponding source and build information](https://github.com/Alex9001/TodoBench/releases/download/v0.1.3/zz-TodoBench-0.1.3-source-and-build-info.zip) are also available.
 
 ## What changed
 

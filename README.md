@@ -60,7 +60,7 @@ TodoBench keeps your project tabs and task list beside the details of the select
 
 Linux packages target Ubuntu 24.04 or compatible newer systems. Make the AppImage executable before opening it; without FUSE, use `APPIMAGE_EXTRACT_AND_RUN=1`. Windows packages have no publisher certificate. macOS apps are ad-hoc signed, without notarization. See the [installation guide](docs/packaging.md#packages-and-unsigned-installation) for first-launch steps.
 
-The release includes [SHA-256 checksums](https://github.com/Alex9001/TodoBench/releases/download/v0.1.3/SHA256SUMS), [corresponding source and build information](https://github.com/Alex9001/TodoBench/releases/download/v0.1.3/zz-TodoBench-0.1.3-source-and-build-info.zip), and a [macOS tester packet](https://github.com/Alex9001/TodoBench/releases/download/v0.1.3/zz-TodoBench-0.1.3-macos-tester-packet.zip). [All releases →](https://github.com/Alex9001/TodoBench/releases)
+The release includes [SHA-256 checksums](https://github.com/Alex9001/TodoBench/releases/download/v0.1.3/zz-TodoBench-0.1.3-SHA256SUMS.txt), [corresponding source and build information](https://github.com/Alex9001/TodoBench/releases/download/v0.1.3/zz-TodoBench-0.1.3-source-and-build-info.zip), and a [macOS tester packet](https://github.com/Alex9001/TodoBench/releases/download/v0.1.3/zz-TodoBench-0.1.3-macos-tester-packet.zip). [All releases →](https://github.com/Alex9001/TodoBench/releases)
 
 ## Quick start
 
