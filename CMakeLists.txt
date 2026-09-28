@@ -401,11 +401,11 @@ install(DIRECTORY docs/ DESTINATION ${CMAKE_INSTALL_DATADIR}/doc/TodoBench OPTIO
 install(FILES LICENSE README.md packaging/THIRD_PARTY_NOTICES.md
     DESTINATION ${CMAKE_INSTALL_DATADIR}/doc/TodoBench)
 install(FILES packaging/linux/todobench.desktop
-    DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/applications RENAME com.todobench.TodoBench.desktop)
 install(FILES packaging/linux/todobench.svg
     DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps)
 install(FILES packaging/linux/com.todobench.TodoBench.metainfo.xml
-    DESTINATION ${CMAKE_INSTALL_DATADIR}/metainfo RENAME todobench.appdata.xml)
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/metainfo RENAME com.todobench.TodoBench.appdata.xml)
 
 option(TODOBENCH_BUNDLE_RUNTIME "Bundle Qt runtime files next to the application" OFF)
 if(TODOBENCH_BUNDLE_RUNTIME)

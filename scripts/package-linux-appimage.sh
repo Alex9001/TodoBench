@@ -65,14 +65,14 @@ test -f "$offscreen_plugin" || {
 mkdir -p "$app_dir/usr/plugins/platforms"
 cp "$offscreen_plugin" "$app_dir/usr/plugins/platforms/"
 
-desktop="$app_dir/usr/share/applications/todobench.desktop"
+desktop="$app_dir/usr/share/applications/com.todobench.TodoBench.desktop"
 icon="$app_dir/usr/share/icons/hicolor/scalable/apps/todobench.svg"
 test -f "$desktop"
 test -f "$icon"
 
 output="$output_dir/TodoBench-${version}-${release_arch}.AppImage"
 desktop-file-validate "$desktop"
-appstreamcli validate --no-net "$app_dir/usr/share/metainfo/todobench.appdata.xml"
+appstreamcli validate --no-net "$app_dir/usr/share/metainfo/com.todobench.TodoBench.appdata.xml"
 QMAKE="$qmake" NO_STRIP=1 OUTPUT="$output" "$linuxdeploy" \
     --appdir "$app_dir" \
     --desktop-file "$desktop" \

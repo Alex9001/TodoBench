@@ -12,7 +12,7 @@
       can be exported and imported as standard 7-Zip archives.
     </p>
   </description>
-  <launchable type="desktop-id">todobench.desktop</launchable>
+  <launchable type="desktop-id">com.todobench.TodoBench.desktop</launchable>
   <developer_name>TodoBench contributors</developer_name>
   <url type="homepage">https://alex9001.github.io/TodoBench/</url>
   <releases>
