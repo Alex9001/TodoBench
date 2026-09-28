@@ -59,13 +59,23 @@ with the corresponding line. Download only from the project's release page.
 The release workflow creates a draft, tests native Linux, Windows, Intel macOS,
 and Apple Silicon macOS builds, and stages packages. Linux sanitizer and quality
 checks and workflow lint are required. Package smoke checks verify startup and
-runtime dependencies. Native tests exercise workspace round trips. Each package
+runtime dependencies. Fresh Ubuntu 22.04 and 24.04 runners inspect every packaged
+Linux ELF file and exercise visible startup, workspace opening, and safe start.
+The pinned AppImage catalog worker also runs on Ubuntu 22.04 before publication.
+Native tests exercise workspace round trips. Each package
 job records theme screenshots at normal and double scale for review.
 
 The final gate downloads staged assets, verifies their checksum inventory and
 required filenames, checks the exact source commit, and publishes only after all
-required jobs succeed. A failed platform leaves the release in draft. Publisher
-certificates are intentionally not used. See the workflow run for validation
+required jobs succeed. The public layout contains eight native packages, one
+corresponding-source/build archive, and one checksum file. The supporting archive
+retains the exact source commit, dependency sources, licenses, and provenance.
+A failed platform leaves the release in draft. Publisher
+certificates are intentionally not used. `verify-staged-release.yml` can revalidate
+an existing draft after a test-environment fix: it requires the original native
+CI and all four package jobs to have passed, checks the draft commit, reruns the
+Linux and catalog gates, and verifies the complete checksum/provenance inventory
+before publication. See the workflow run for validation
 logs; a green startup test does not assert every desktop integration was manually
 exercised.
 
