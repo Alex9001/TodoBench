@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Require stable-channel update information and a matching zsync control file."""
 import hashlib
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -10,7 +11,9 @@ import tempfile
 def verify(appimage):
     architecture = appimage.stem.rsplit('-', 1)[1]
     expected = f'gh-releases-zsync|Alex9001|TodoBench|latest|TodoBench-*-{architecture}.AppImage.zsync'
-    actual = subprocess.check_output([str(appimage.resolve()), '--appimage-updateinformation'], text=True).strip()
+    runtime_env = {key: value for key, value in os.environ.items() if key != 'APPIMAGE_EXTRACT_AND_RUN'}
+    actual = subprocess.check_output([str(appimage.resolve()), '--appimage-updateinformation'],
+                                     text=True, env=runtime_env).strip()
     assert actual == expected, (actual, expected)
     control = appimage.with_name(appimage.name + '.zsync').read_bytes()
     header, blocks = control.split(b'\n\n', 1)
