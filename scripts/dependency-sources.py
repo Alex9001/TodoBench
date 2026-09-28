@@ -69,8 +69,17 @@ def archived_ubuntu_source(stage, source):
 
 
 def linux_sources(stage):
-    # Ubuntu's deb822 sources must offer the exact installed source versions.
-    subprocess.run(['sudo', 'sed', '-i', 's/^Types: deb$/Types: deb deb-src/', '/etc/apt/sources.list.d/ubuntu.sources'], check=True)
+    # Enable source repositories in both Ubuntu APT configuration formats.
+    for source_list in [Path('/etc/apt/sources.list'), *Path('/etc/apt/sources.list.d').glob('*.list')]:
+        if source_list.exists():
+            lines = [line.replace('deb ', 'deb-src ', 1) for line in source_list.read_text().splitlines()
+                     if line.startswith('deb ') and ('ubuntu.com' in line)]
+            if lines:
+                subprocess.run(['sudo', 'tee', str(source_list.with_suffix('.todobench.list'))],
+                               input='\n'.join(lines) + '\n', text=True, check=True)
+    for source_list in Path('/etc/apt/sources.list.d').glob('*.sources'):
+        if 'ubuntu.com' in source_list.read_text():
+            subprocess.run(['sudo', 'sed', '-i', 's/^Types: deb$/Types: deb deb-src/', str(source_list)], check=True)
     subprocess.run(['sudo', 'apt-get', 'update'], check=True, stdout=subprocess.DEVNULL)
     sources = set()
     qt_plugins = {p.name for p in (Path(os.environ['QT_ROOT_DIR']) / 'plugins').rglob('*.so')}

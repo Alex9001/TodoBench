@@ -70,9 +70,10 @@ icon="$app_dir/usr/share/icons/hicolor/scalable/apps/todobench.svg"
 test -f "$desktop"
 test -f "$icon"
 
-output="$output_dir/TodoBench-${version}-linux-${release_arch}.AppImage"
-# appimagetool treats AppStream warnings as errors; this project has no public homepage yet.
-QMAKE="$qmake" NO_STRIP=1 LDAI_NO_APPSTREAM=1 OUTPUT="$output" "$linuxdeploy" \
+output="$output_dir/TodoBench-${version}-${release_arch}.AppImage"
+desktop-file-validate "$desktop"
+appstreamcli validate --no-net "$app_dir/usr/share/metainfo/com.todobench.TodoBench.metainfo.xml"
+QMAKE="$qmake" NO_STRIP=1 OUTPUT="$output" "$linuxdeploy" \
     --appdir "$app_dir" \
     --desktop-file "$desktop" \
     --icon-file "$icon" \

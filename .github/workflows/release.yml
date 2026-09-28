@@ -36,7 +36,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-24.04
+          - os: ubuntu-22.04
             platform: linux-x86_64
           - os: windows-2025
             platform: windows-x64
@@ -102,8 +102,90 @@ jobs:
           name: screenshots-${{ matrix.platform }}
           path: build/screenshots/
           if-no-files-found: error
+  linux-compatibility:
+    needs: [stage, package]
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, ubuntu-24.04]
+    runs-on: ${{ matrix.os }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+      VERSION: ${{ needs.stage.outputs.version }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38
+        with:
+          python-version: '3.12'
+      - name: Install runtime test tools (no Qt SDK)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb xauth imagemagick libfuse2 libxcb-cursor0 libxkbcommon-x11-0
+      - name: Download exact draft packages and test
+        run: |
+          gh release download "v$VERSION" --pattern '*AppImage' --pattern '*linux-x86_64.tar.gz' --dir candidates
+          xvfb-run -a python3 scripts/check-linux-package.py candidates
+      - if: always()
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08
+        with:
+          name: linux-compatibility-${{ matrix.os }}
+          path: build/linux-evidence/
+  catalog:
+    needs: [stage, package]
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ github.token }}
+      VERSION: ${{ needs.stage.outputs.version }}
+      DISPLAY: ':99'
+      IS_PULLREQUEST: 'true'
+      STRICT: 'true'
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Download exact candidate
+        run: |
+          gh release download "v$VERSION" --pattern '*AppImage' --dir candidates
+          sha256sum candidates/* > candidate-sha256.txt
+      - name: Check out pinned upstream catalog worker
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          repository: AppImage/appimage.github.io
+          ref: f1249e9e1ff840dd53a6218aec3451ebd6bf476d
+          path: catalog
+      - name: Install upstream worker dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y sudo imagemagick libasound2-dev pulseaudio-utils alsa-utils alsa-oss libjack0 desktop-file-utils xmlstarlet xsel xterm xvfb icewm x11-utils x11-apps netpbm xdotool libgl1-mesa-dri libgl1-mesa-dev mesa-utils libosmesa6 libsdl1.2-dev libsdl2-2.0-0 fonts-wqy-microhei libfile-mimeinfo-perl tesseract-ocr tesseract-ocr-eng tesseract-ocr-chi-sim tesseract-ocr-ara tesseract-ocr-rus tesseract-ocr-ell libfuse2 stalonetray
+          cd catalog
+          bash code/fetch-deps.sh
+          cp -a deps/. .
+          sudo bash code/prep-dummy-soundcard.sh
+          sudo gem install dupervisor -v 1.0.5
+          sudo npm install -g asar
+      - name: Run unmodified catalog worker against candidate bytes
+        run: |
+          python3 -m http.server 8765 --bind 127.0.0.1 --directory candidates > server.log 2>&1 &
+          Xvfb :99 -screen 0 800x600x24 > xvfb.log 2>&1 &
+          mkdir -p "$HOME/.icewm"
+          echo 'ShowTaskBar = 0' > "$HOME/.icewm/preferences"
+          sleep 2
+          cd catalog
+          echo "http://127.0.0.1:8765/TodoBench-$VERSION-x86_64.AppImage" > data/TodoBench
+          timeout --kill-after=30 600 bash -e code/worker.sh "$PWD/data/TodoBench" 2>&1 | tee ../catalog.log
+          cmp BeingTested.AppImage "../candidates/TodoBench-$VERSION-x86_64.AppImage"
+      - if: always()
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08
+        with:
+          name: appimage-catalog-evidence
+          path: |
+            catalog.log
+            candidate-sha256.txt
+            catalog/database/TodoBench/
+            catalog/failure-screens/
+            server.log
+            xvfb.log
   verify-and-publish:
-    needs: [stage, checks, package]
+    needs: [stage, checks, package, linux-compatibility, catalog]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -117,7 +199,7 @@ jobs:
         run: |
           gh release download "v$VERSION" --dir release-assets
           python3 scripts/verify-release.py release-assets "$VERSION" "$GITHUB_SHA"
-          gh release upload "v$VERSION" release-assets/SHA256SUMS --clobber
+          python3 scripts/finalize-release.py release-assets "$VERSION"
       - name: Publish verified draft
         if: inputs.publish
         run: gh release edit "v$VERSION" --draft=false --latest

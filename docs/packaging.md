@@ -39,7 +39,7 @@ with the corresponding line. Download only from the project's release page.
 - **Linux x86_64:** make the AppImage executable and launch it. If FUSE is
   unavailable, set `APPIMAGE_EXTRACT_AND_RUN=1`. The portable `.tar.gz` bundles
   the same runtime tree; extract it and run its `TodoBench` launcher. Keep the
-  extracted directory intact. Packages target Ubuntu 24.04 or compatible newer
+  extracted directory intact. Packages target Ubuntu 22.04 or compatible newer
   systems with the required glibc and desktop display libraries.
 - **Windows x64:** extract the ZIP and run `TodoBench.exe`, or run the per-user
   installer. It installs under `%LOCALAPPDATA%\TodoBench` without administrator
