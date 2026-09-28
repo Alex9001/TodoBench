@@ -79,7 +79,7 @@ def enable_ubuntu_sources():
             lines = [line.replace('deb ', 'deb-src ', 1) for line in source_list.read_text().splitlines()
                      if line.startswith('deb ') and is_ubuntu_source(line)]
             if lines:
-                subprocess.run(['sudo', 'tee', str(source_list.with_suffix('.todobench.list'))],
+                subprocess.run(['sudo', 'tee', str(Path('/etc/apt/sources.list.d') / (source_list.stem + '.todobench.list'))],
                                input='\n'.join(lines) + '\n', text=True, check=True)
     for source_list in Path('/etc/apt/sources.list.d').glob('*.sources'):
         if is_ubuntu_source(source_list.read_text()):
