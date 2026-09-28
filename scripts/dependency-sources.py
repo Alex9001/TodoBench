@@ -68,7 +68,7 @@ def archived_ubuntu_source(stage, source):
     (stage / (name + '-launchpad.json')).write_text(json.dumps({'publication': publication, 'downloads': records}, indent=2) + '\n')
 
 
-def linux_sources(stage):
+def enable_ubuntu_sources():
     # Enable source repositories in both Ubuntu APT configuration formats.
     for source_list in [Path('/etc/apt/sources.list'), *Path('/etc/apt/sources.list.d').glob('*.list')]:
         if source_list.exists():
@@ -81,6 +81,10 @@ def linux_sources(stage):
         if 'ubuntu.com' in source_list.read_text():
             subprocess.run(['sudo', 'sed', '-i', 's/^Types: deb$/Types: deb deb-src/', str(source_list)], check=True)
     subprocess.run(['sudo', 'apt-get', 'update'], check=True, stdout=subprocess.DEVNULL)
+
+
+def linux_sources(stage):
+    enable_ubuntu_sources()
     sources = set()
     qt_plugins = {p.name for p in (Path(os.environ['QT_ROOT_DIR']) / 'plugins').rglob('*.so')}
     for file in Path('build/release/AppDir').rglob('*.so*'):
