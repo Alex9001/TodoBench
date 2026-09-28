@@ -10,7 +10,7 @@ import tarfile
 def main():
     root, version, commit = Path(sys.argv[1]), sys.argv[2], sys.argv[3]
     prefix = 'TodoBench-' + version
-    required = [prefix + suffix for suffix in ('-x86_64.AppImage', '-linux-x86_64.tar.gz',
+    required = [prefix + suffix for suffix in ('-x86_64.AppImage', '-x86_64.AppImage.zsync', '-linux-x86_64.tar.gz',
                 '-windows-x64.zip', '-windows-x64-setup.exe', '-macos-x86_64.zip', '-macos-x86_64.dmg',
                 '-macos-arm64.zip', '-macos-arm64.dmg', '-source.tar.gz')]
     for name in required:
@@ -19,7 +19,7 @@ def main():
     for target in ('linux-x86_64', 'windows-x64', 'macos-x86_64', 'macos-arm64'):
         manifest = root / ('checksums-' + target + '.txt')
         entries = manifest.read_text().splitlines()
-        assert len(entries) == 3, manifest
+        assert len(entries) == (4 if target == 'linux-x86_64' else 3), manifest
         for line in entries:
             expected, name = line.split('  ', 1)
             assert Path(name).name == name

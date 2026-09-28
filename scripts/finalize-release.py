@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Consolidate a verified draft into eight downloads and two supporting assets."""
+"""Consolidate a verified draft into eight downloads, update metadata, and two supporting assets."""
 import hashlib
 import json
 from pathlib import Path
@@ -11,6 +11,7 @@ root, version = Path(sys.argv[1]), sys.argv[2]
 tag = 'v' + version
 prefix = 'TodoBench-' + version
 packages = {
+    prefix + '-x86_64.AppImage.zsync': 'Linux x86_64 — AppImage update metadata',
     prefix + '-x86_64.AppImage': 'Linux x86_64 — AppImage',
     prefix + '-linux-x86_64.tar.gz': 'Linux x86_64 — Portable archive',
     prefix + '-windows-x64-setup.exe': 'Windows x64 — Installer',
@@ -35,4 +36,4 @@ for asset in release['assets']:
         subprocess.run(['gh', 'release', 'delete-asset', tag, asset['name'], '--yes'], check=True)
     else:
         subprocess.run(['gh', 'api', '--method', 'PATCH', 'repos/{owner}/{repo}/releases/assets/' + str(asset['apiUrl'].rsplit('/', 1)[1]), '-f', 'label=' + packages[asset['name']]], check=True)
-print('Draft consolidated into ten labeled assets')
+print('Draft consolidated into eleven labeled assets')

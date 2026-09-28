@@ -68,7 +68,11 @@ job records theme screenshots at normal and double scale for review.
 The final gate downloads staged assets, verifies their checksum inventory and
 required filenames, checks the exact source commit, and publishes only after all
 required jobs succeed. The public layout contains eight native packages, one
-corresponding-source/build archive, and one checksum file. The supporting archive
+corresponding-source/build archive, one checksum file, and an AppImage `.zsync`
+sidecar. The sidecar must stay next to the AppImage on GitHub Releases; its
+embedded update channel selects the latest stable release for the same
+architecture. External tools such as AppImageUpdate can use it. Versions before
+0.1.5 need a one-time manual download to gain this support. The supporting archive
 retains the exact source commit, dependency sources, licenses, and provenance.
 A failed platform leaves the release in draft. Publisher
 certificates are intentionally not used. `verify-staged-release.yml` can revalidate

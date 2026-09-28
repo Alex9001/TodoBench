@@ -25,7 +25,7 @@ runs:
       run: |
         sudo apt-get update
         sudo apt-get install -y ninja-build libyaml-cpp-dev libarchive-dev p7zip-full clang-tidy \
-          libgl1-mesa-dev libxkbcommon-x11-0 libxcb-cursor0 pkg-config libfuse2 desktop-file-utils appstream gcc-11 g++-11
+          libgl1-mesa-dev libxkbcommon-x11-0 libxcb-cursor0 pkg-config libfuse2 desktop-file-utils appstream gcc-11 g++-11 zsync
         if [ "$ImageOS" = ubuntu22 ]; then
           echo "CC=gcc-11" >> "$GITHUB_ENV"
           echo "CXX=g++-11" >> "$GITHUB_ENV"

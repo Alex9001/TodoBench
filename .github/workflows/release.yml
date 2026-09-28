@@ -120,10 +120,12 @@ jobs:
       - name: Install runtime test tools (no Qt SDK)
         run: |
           sudo apt-get update
-          sudo apt-get install -y xvfb xauth imagemagick libfuse2 libxcb-cursor0 libxkbcommon-x11-0 libgl1 libegl1 libopengl0
+          sudo apt-get install -y xvfb xauth imagemagick libfuse2 libxcb-cursor0 libxkbcommon-x11-0 libgl1 libegl1 libopengl0 zsync
       - name: Download exact draft packages and test
         run: |
-          gh release download "v$VERSION" --pattern '*AppImage' --pattern '*linux-x86_64.tar.gz' --dir candidates
+          gh release download "v$VERSION" --pattern '*AppImage' --pattern '*AppImage.zsync' --pattern '*linux-x86_64.tar.gz' --dir candidates
+          chmod +x candidates/*.AppImage
+          python3 scripts/check-appimage-update.py candidates/*.AppImage
           xvfb-run -a python3 scripts/check-linux-package.py candidates
       - if: always()
         uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08

@@ -73,13 +73,20 @@ test -f "$icon"
 output="$output_dir/TodoBench-${version}-${release_arch}.AppImage"
 desktop-file-validate "$desktop"
 appstreamcli validate --no-net "$app_dir/usr/share/metainfo/com.todobench.TodoBench.appdata.xml"
-QMAKE="$qmake" NO_STRIP=1 OUTPUT="$output" "$linuxdeploy" \
+update_information="gh-releases-zsync|Alex9001|TodoBench|latest|TodoBench-*-${release_arch}.AppImage.zsync"
+QMAKE="$qmake" NO_STRIP=1 LDAI_OUTPUT="$output" LDAI_UPDATE_INFORMATION="$update_information" "$linuxdeploy" \
     --appdir "$app_dir" \
     --desktop-file "$desktop" \
     --icon-file "$icon" \
     --plugin qt \
     --output appimage
+# The bundled zsyncmake writes its control file into the working directory.
+zsync="$(basename "$output").zsync"
+if [ -f "$zsync" ] && [ ! "$zsync" -ef "$output.zsync" ]; then
+    mv "$zsync" "$output.zsync"
+fi
 test -f "$output"
+python3 "$root/scripts/check-appimage-update.py" "$output"
 APPIMAGE_EXTRACT_AND_RUN=1 "$output" --appimage-version >/dev/null || \
     APPIMAGE_EXTRACT_AND_RUN=1 "$output" --version >/dev/null
 cp "$root/LICENSE" "$root/packaging/THIRD_PARTY_NOTICES.md" "$output_dir/"
