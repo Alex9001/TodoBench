@@ -68,17 +68,21 @@ def archived_ubuntu_source(stage, source):
     (stage / (name + '-launchpad.json')).write_text(json.dumps({'publication': publication, 'downloads': records}, indent=2) + '\n')
 
 
+def is_ubuntu_source(text):
+    return 'ubuntu.com' in text or 'mirror+file:/etc/apt/apt-mirrors.txt' in text
+
+
 def enable_ubuntu_sources():
     # Enable source repositories in both Ubuntu APT configuration formats.
     for source_list in [Path('/etc/apt/sources.list'), *Path('/etc/apt/sources.list.d').glob('*.list')]:
         if source_list.exists():
             lines = [line.replace('deb ', 'deb-src ', 1) for line in source_list.read_text().splitlines()
-                     if line.startswith('deb ') and ('ubuntu.com' in line)]
+                     if line.startswith('deb ') and is_ubuntu_source(line)]
             if lines:
                 subprocess.run(['sudo', 'tee', str(source_list.with_suffix('.todobench.list'))],
                                input='\n'.join(lines) + '\n', text=True, check=True)
     for source_list in Path('/etc/apt/sources.list.d').glob('*.sources'):
-        if 'ubuntu.com' in source_list.read_text():
+        if is_ubuntu_source(source_list.read_text()):
             subprocess.run(['sudo', 'sed', '-i', 's/^Types: deb$/Types: deb deb-src/', str(source_list)], check=True)
     subprocess.run(['sudo', 'apt-get', 'update'], check=True, stdout=subprocess.DEVNULL)
 

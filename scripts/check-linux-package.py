@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import re
 import shutil
+import signal
 import subprocess
 import sys
 import tempfile
@@ -55,7 +56,7 @@ def launch(binary, state, report, expected, *args):
     version = output(str(binary), '--version', env=env)
     assert output(sys.executable, 'scripts/version.py').strip() in version, version
     with report.with_suffix('.log').open('w') as log:
-        process = subprocess.Popen([str(binary), '--state-dir', str(state / 'app'), '--startup-check', str(report), *args], env=env, stdout=log, stderr=log)
+        process = subprocess.Popen([str(binary), '--state-dir', str(state / 'app'), '--startup-check', str(report), *args], env=env, stdout=log, stderr=log, start_new_session=True)
         try:
             for _ in range(300):
                 assert process.poll() is None, report.with_suffix('.log').read_text()
@@ -67,7 +68,10 @@ def launch(binary, state, report, expected, *args):
                 time.sleep(.1)
             raise AssertionError('No visible responsive window: ' + str(report))
         finally:
-            process.terminate()
+            try:
+                os.killpg(process.pid, signal.SIGTERM)
+            except ProcessLookupError:
+                pass
             process.wait(timeout=20)
 
 
