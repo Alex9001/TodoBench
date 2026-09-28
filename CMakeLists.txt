@@ -405,7 +405,7 @@ install(FILES packaging/linux/todobench.desktop
 install(FILES packaging/linux/todobench.svg
     DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps)
 install(FILES packaging/linux/com.todobench.TodoBench.metainfo.xml
-    DESTINATION ${CMAKE_INSTALL_DATADIR}/metainfo)
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/metainfo RENAME todobench.appdata.xml)
 
 option(TODOBENCH_BUNDLE_RUNTIME "Bundle Qt runtime files next to the application" OFF)
 if(TODOBENCH_BUNDLE_RUNTIME)
