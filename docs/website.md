@@ -53,8 +53,9 @@ They show the built-in fictional sample workspaces with the current List view.
 The four appearance images show that same Team handbook sample in Light, Dark,
 Brown, and Paper. All are native Qt widget captures at 1280 × 820 logical pixels
 with 2× display scaling, saved at 2560 × 1640 pixels without upscaling.
-They contain no personal workspace data. The first README image is the same
-current Team screenshot. Native fonts can vary by platform.
+They contain no personal workspace data. The branded GitHub preview graphic
+in `docs/images/todobench-preview.png` is separate from the native app screenshots
+and is preserved in its original form. Native fonts can vary by platform.
 
 Regenerate sample captures from a current native build:
 
