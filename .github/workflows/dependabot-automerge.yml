@@ -1,8 +1,8 @@
 name: Dependabot auto-merge
 
+# Automatic runs are disabled; run manually only after explicit approval.
 on:
-  pull_request_target:
-    types: [opened, reopened, synchronize]
+  workflow_dispatch:
 
 permissions:
   contents: write

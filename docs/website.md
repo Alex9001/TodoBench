@@ -35,16 +35,10 @@ with `node --check site/app.js`; lint the workflow with `actionlint`.
 
 ## Publish
 
-GitHub Pages is configured to use **GitHub Actions**. `.github/workflows/pages.yml`
-validates pull requests, and deploys changes on `main` or a manual run. Publishing
-an application release dispatches a site deployment from `main`, keeping the
-GitHub Pages environment's branch restrictions intact instead of deploying from
-the release tag. The build uses the new release's asset inventory.
-When a release is published using the repository's automatic
-`GITHUB_TOKEN`, GitHub may suppress a downstream release event; the release
-workflow explicitly dispatches Pages after publication to cover that path.
-A missing required asset fails the build and leaves the existing site in place.
-Only `build/pages` is uploaded, never the whole repository or a workspace.
+The site source is prepared for GitHub Pages. Automatic Actions triggers are
+currently disabled to avoid unrequested compute. Screenshot and documentation
+updates do not deploy the site. Run any publication workflow only after explicit
+approval. Local builds and validation do not require GitHub Actions.
 
 Update the README's versioned download table when publishing a new application
 release. The site itself resolves released assets at build time. Keep all local
@@ -53,17 +47,19 @@ URLs relative so the `/TodoBench/` project prefix works correctly.
 ## Screenshots and branding
 
 The site and README share original screenshots in `site/assets/screenshots/`.
-`team.png`, `home.png`, and `everyday.png` were captured from the built-in sample
-workspaces at 1280 × 820 using the native `sampleWorkflowRenders` test. They use
-fictional sample data and the Light theme. The four theme images are Linux native
-release-verification captures, also at 1280 × 820. They show the same task so the
-palette differences are directly comparable. They are app screenshots, not HTML
-recreations. Layout and native fonts can vary by platform.
+`team.png`, `home.png`, and `everyday.png` were refreshed from the native
+application at commit `63328cabf1e98e3ed9cfbdb37ec67f14d781052a` on 2026-10-06.
+They show the built-in fictional sample workspaces with the current List view.
+The four appearance images show that same Team handbook sample in Light, Dark,
+Brown, and Paper. All are native Qt widget captures at 1280 × 820 logical pixels
+with 2× display scaling, saved at 2560 × 1640 pixels without upscaling.
+They contain no personal workspace data. The first README image is the same
+current Team screenshot. Native fonts can vary by platform.
 
 Regenerate sample captures from a current native build:
 
 ```bash
-QT_QPA_PLATFORM=offscreen \
+QT_QPA_PLATFORM=offscreen QT_SCALE_FACTOR=2 \
 TODOBENCH_SAMPLE_SCREENSHOTS="$PWD/build/site-screenshots" \
 build/dev/test_main_window sampleWorkflowRenders
 ```

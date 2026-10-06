@@ -112,8 +112,8 @@ Choose **View → Appearance** for System, Light, Dark, Midnight, Blue, Green, B
 <table>
   <tr><th width="50%">Dark</th><th width="50%">Brown</th></tr>
   <tr>
-    <td><a href="site/assets/screenshots/dark.png"><img src="site/assets/screenshots/dark.png" alt="TodoBench in the Dark theme with recurrence and a Markdown checklist"></a></td>
-    <td><a href="site/assets/screenshots/brown.png"><img src="site/assets/screenshots/brown.png" alt="TodoBench in the Brown theme with matching task controls and notes"></a></td>
+    <td><a href="site/assets/screenshots/dark.png"><img src="site/assets/screenshots/dark.png" alt="TodoBench Team handbook sample in the Dark theme"></a></td>
+    <td><a href="site/assets/screenshots/brown.png"><img src="site/assets/screenshots/brown.png" alt="TodoBench Team handbook sample in the Brown theme"></a></td>
   </tr>
 </table>
 

@@ -1,25 +1,7 @@
 name: GitHub Pages
 
+# Automatic runs are disabled; run manually only after explicit approval.
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'site/**'
-      - 'scripts/build-site.py'
-      - '.github/workflows/pages.yml'
-      - 'docs/**'
-      - 'README.md'
-      - 'CONTRIBUTING.md'
-  pull_request:
-    paths:
-      - 'site/**'
-      - 'scripts/build-site.py'
-      - '.github/workflows/pages.yml'
-      - 'docs/**'
-      - 'README.md'
-      - 'CONTRIBUTING.md'
-  release:
-    types: [published]
   workflow_dispatch:
 
 permissions:

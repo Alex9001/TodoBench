@@ -8,7 +8,7 @@ for (const button of themeButtons) {
     const theme = button.dataset.theme;
     const label = button.textContent.trim();
     themeImage.src = `assets/screenshots/${theme}.png`;
-    themeImage.alt = `TodoBench in the ${label} theme, showing task recurrence and a Markdown checklist`;
+    themeImage.alt = `TodoBench in the ${label} theme, showing the Team handbook sample`;
     themeLink.href = themeImage.src;
     themeCaption.textContent = `${label} theme · Choose View → Appearance in TodoBench.`;
     for (const choice of themeButtons) choice.setAttribute('aria-pressed', String(choice === button));
