@@ -33,6 +33,8 @@
 
 <p align="center"><sub>The actual desktop app, showing the included Team project sample. Sample people and projects are fictional.</sub></p>
 
+[Watch the 14-second TodoBench video](https://github.com/Alex9001/TodoBench/raw/refs/heads/main/docs/media/TodoBench-Widescreen-Promo-14s-1080p.mp4) · Complete native interface with fictional sample data, 1080p with music. [Video and music provenance](docs/media/todobench-promo.md).
+
 ## Keep the task and its context together
 
 TodoBench keeps your project tabs and task list beside the details of the selected task. Organize a household job, plan a move, or track a project through drafting, review, and handoff. Notes and attachments stay with the work they describe.
